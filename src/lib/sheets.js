@@ -161,7 +161,6 @@ export async function getGoals(userId) {
     try {
         const doc = await getDoc();
         if (!doc.sheetsByTitle['goals']) {
-             // Se não existir a aba goals, retorna vazio (evita crash)
              return [];
         }
         const sheet = doc.sheetsByTitle['goals'];
