@@ -2,6 +2,7 @@ import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
 import { v4 as uuidv4 } from 'uuid';
 
+// --- CONEXÃO ---
 async function getDoc() {
   const serviceAccountAuth = new JWT({
     email: import.meta.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -14,14 +15,18 @@ async function getDoc() {
   return doc;
 }
 
+// --- USUÁRIOS ---
 export async function findUserByEmail(email) {
   try {
     const doc = await getDoc();
     const sheet = doc.sheetsByTitle['users'];
     const rows = await sheet.getRows();
     const userRow = rows.find(row => row.get('email') === email);
+    
     if (!userRow) return null;
+    
     const userId = userRow.get('id') || userRow.get('id:') || userRow.get('ID');
+
     return {
       id: userId,
       name: userRow.get('name'),
@@ -35,6 +40,26 @@ export async function findUserByEmail(email) {
   }
 }
 
+export async function createUser(dados) {
+    const doc = await getDoc();
+    const sheet = doc.sheetsByTitle['users'];
+    const rows = await sheet.getRows();
+    const existe = rows.find(row => row.get('email') === dados.email);
+
+    if (existe) {
+        throw new Error("Este email já está cadastrado.");
+    }
+
+    await sheet.addRow({
+        id: uuidv4(),
+        name: dados.name,
+        email: dados.email,
+        password: dados.password,
+        salary: dados.salary || 0
+    });
+}
+
+// --- TRANSAÇÕES ---
 export async function getUserTransactions(userId, mes = null, ano = null) {
   try {
     const doc = await getDoc();
@@ -43,7 +68,6 @@ export async function getUserTransactions(userId, mes = null, ano = null) {
 
     let userRows = rows.filter(row => row.get('user_id') === userId);
 
-    // Tratamento de dados
     const transacoes = userRows.map(row => {
         const dateStr = row.get('date');
         const [day, month, year] = dateStr.split('/');
@@ -61,7 +85,6 @@ export async function getUserTransactions(userId, mes = null, ano = null) {
         };
     });
 
-    // FILTRO DE MÊS (Se informado)
     if (mes && ano) {
         return transacoes
             .filter(t => t.month === parseInt(mes) && t.year === parseInt(ano))
@@ -76,7 +99,6 @@ export async function getUserTransactions(userId, mes = null, ano = null) {
   }
 }
 
-// --- FUNÇÕES DE TRANSAÇÕES ---
 export async function addTransaction(data) {
     const doc = await getDoc();
     const sheet = doc.sheetsByTitle['transactions'];
@@ -134,16 +156,14 @@ export async function importTransactions(lista) {
     await sheet.addRows(rows);
 }
 
-// --- NOVAS FUNÇÕES DE METAS (GOALS) ---
+// --- METAS (GOALS) ---
 export async function getGoals(userId) {
     try {
         const doc = await getDoc();
-        // Cria a aba se não existir (prevenção de erro)
         if (!doc.sheetsByTitle['goals']) {
-             const newSheet = await doc.addSheet({ title: 'goals', headerValues: ['id', 'user_id', 'title', 'target_amount', 'current_amount', 'icon', 'color'] });
+             // Se não existir a aba goals, retorna vazio (evita crash)
              return [];
         }
-
         const sheet = doc.sheetsByTitle['goals'];
         const rows = await sheet.getRows();
         return rows
@@ -197,56 +217,3 @@ export async function deleteGoal(goalId) {
     const row = rows.find(r => r.get('id') === goalId);
     if (row) await row.delete();
 }
-
-
-// ... (Mantenha os imports e a função getDoc) ...
-
-// FUNÇÃO DE LOGIN (Já existia, mas garantindo que está atualizada)
-export async function findUserByEmail(email) {
-  try {
-    const doc = await getDoc();
-    const sheet = doc.sheetsByTitle['users'];
-    const rows = await sheet.getRows();
-    const userRow = rows.find(row => row.get('email') === email);
-    
-    if (!userRow) return null;
-    
-    const userId = userRow.get('id') || userRow.get('id:') || userRow.get('ID');
-
-    return {
-      id: userId,
-      name: userRow.get('name'),
-      email: userRow.get('email'),
-      password: userRow.get('password'),
-      salary: parseFloat(userRow.get('salary') || 0)
-    };
-  } catch (error) {
-    console.error("Erro findUser:", error);
-    return null;
-  }
-}
-
-// NOVA FUNÇÃO: CRIAR USUÁRIO
-export async function createUser(dados) {
-    const doc = await getDoc();
-    const sheet = doc.sheetsByTitle['users'];
-    
-    // 1. Carrega linhas para verificar duplicidade
-    const rows = await sheet.getRows();
-    const existe = rows.find(row => row.get('email') === dados.email);
-
-    if (existe) {
-        throw new Error("Este email já está cadastrado.");
-    }
-
-    // 2. Cria o usuário
-    await sheet.addRow({
-        id: uuidv4(), // ID único
-        name: dados.name,
-        email: dados.email,
-        password: dados.password, // Em produção real, usaríamos hash (bcrypt)
-        salary: dados.salary || 0
-    });
-}
-
-// ... (Mantenha as outras funções de transações e metas) ...
