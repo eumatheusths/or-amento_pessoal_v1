@@ -1,0 +1,93 @@
+---
+export const prerender = false;
+import Layout from '../layouts/Layout.astro';
+import { getUserTransactions } from '../lib/sheets';
+
+if (!Astro.cookies.has('user_session')) return Astro.redirect('/login');
+const userId = Astro.cookies.get('user_session')?.value;
+const allTransactions = await getUserTransactions(userId);
+
+const dadosPorMes = {};
+let totalAnoEntradas = 0;
+let totalAnoSaidas = 0;
+
+allTransactions.forEach(t => {
+    const [dia, mes, ano] = t.date.split('/');
+    const chave = `${ano}-${mes}`;
+
+    if (!dadosPorMes[chave]) dadosPorMes[chave] = { entradas: 0, saidas: 0, saldo: 0, ano, mes };
+
+    if (t.type === 'entrada') {
+        dadosPorMes[chave].entradas += t.amount;
+        totalAnoEntradas += t.amount;
+    } else {
+        dadosPorMes[chave].saidas += t.amount;
+        totalAnoSaidas += t.amount;
+    }
+});
+
+const relatorio = Object.values(dadosPorMes)
+    .sort((a, b) => b.ano - a.ano || b.mes - a.mes)
+    .map(item => {
+        item.saldo = item.entradas - item.saidas;
+        return item;
+    });
+
+const saldoGeral = totalAnoEntradas - totalAnoSaidas;
+const money = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+const getNomeMes = (mes, ano) => new Date(ano, mes - 1, 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+const maiorValorDoMes = Math.max(...relatorio.map(r => Math.max(r.entradas, r.saidas))) || 1;
+---
+
+<Layout>
+    <div class="p-6 flex items-center gap-4 bg-blue-900/20 border-b border-blue-800/30">
+        <div class="p-2 bg-blue-900 rounded-lg text-blue-400">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+        </div>
+        <h1 class="text-xl font-bold text-blue-50">Relatório Anual</h1>
+    </div>
+
+    <main class="max-w-3xl mx-auto px-4 py-6 space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-blue-900/40 p-5 rounded-2xl border border-blue-800/50">
+                <span class="text-blue-300 text-xs uppercase font-bold">Total Entradas</span>
+                <p class="text-2xl font-bold text-green-400 mt-1">{money(totalAnoEntradas)}</p>
+            </div>
+            <div class="bg-blue-900/40 p-5 rounded-2xl border border-blue-800/50">
+                <span class="text-blue-300 text-xs uppercase font-bold">Total Saídas</span>
+                <p class="text-2xl font-bold text-red-400 mt-1">{money(totalAnoSaidas)}</p>
+            </div>
+            <div class={`bg-blue-900/40 p-5 rounded-2xl border border-blue-800/50 ${saldoGeral >= 0 ? 'shadow-[0_0_15px_rgba(74,222,128,0.1)]' : 'shadow-[0_0_15px_rgba(248,113,113,0.1)]'}`}>
+                <span class="text-blue-300 text-xs uppercase font-bold">Saldo Acumulado</span>
+                <p class={`text-2xl font-bold mt-1 ${saldoGeral >= 0 ? 'text-blue-100' : 'text-red-300'}`}>{money(saldoGeral)}</p>
+            </div>
+        </div>
+
+        <h3 class="text-blue-200 font-bold px-2 text-sm uppercase tracking-wider">Desempenho Mensal</h3>
+
+        <div class="space-y-4">
+            {relatorio.map(mes => (
+                <div class="bg-blue-900/20 border border-blue-800/30 p-5 rounded-2xl">
+                    <div class="flex justify-between items-end mb-3">
+                        <h2 class="text-lg font-bold text-white capitalize">{getNomeMes(mes.mes, mes.ano)}</h2>
+                        <span class={`text-sm font-bold px-2 py-1 rounded-lg ${mes.saldo >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                            {mes.saldo >= 0 ? '+' : ''}{money(mes.saldo)}
+                        </span>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-xs text-blue-300 mb-1"><span>Entradas</span><span>{money(mes.entradas)}</span></div>
+                            <div class="h-2 w-full bg-blue-950 rounded-full overflow-hidden"><div class="h-full bg-green-500 rounded-full" style={`width: ${(mes.entradas / maiorValorDoMes) * 100}%`}></div></div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs text-blue-300 mb-1"><span>Saídas</span><span>{money(mes.saidas)}</span></div>
+                            <div class="h-2 w-full bg-blue-950 rounded-full overflow-hidden"><div class="h-full bg-red-500 rounded-full" style={`width: ${(mes.saidas / maiorValorDoMes) * 100}%`}></div></div>
+                        </div>
+                    </div>
+                </div>
+            ))}
+        </div>
+    </main>
+</Layout>

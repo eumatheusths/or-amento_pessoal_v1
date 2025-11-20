@@ -1,0 +1,15 @@
+---
+export const prerender = false;
+import { deleteTransaction } from '../lib/sheets';
+
+if (Astro.request.method === 'POST') {
+    const formData = await Astro.request.formData();
+    const id = formData.get('id')?.toString();
+    
+    if (id) {
+        await deleteTransaction(id);
+    }
+}
+
+return Astro.redirect('/dashboard');
+---

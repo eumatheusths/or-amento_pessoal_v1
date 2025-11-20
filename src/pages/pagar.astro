@@ -1,0 +1,12 @@
+---
+export const prerender = false;
+import { markAsPaid } from '../lib/sheets';
+
+if (Astro.request.method === 'POST') {
+    const formData = await Astro.request.formData();
+    const id = formData.get('id')?.toString();
+    if (id) await markAsPaid(id);
+}
+
+return Astro.redirect('/dashboard');
+---

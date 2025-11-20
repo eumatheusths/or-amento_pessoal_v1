@@ -1,0 +1,140 @@
+---
+export const prerender = false;
+import Layout from '../layouts/Layout.astro';
+import { importTransactions } from '../lib/sheets';
+import Papa from 'papaparse';
+
+if (!Astro.cookies.has('user_session')) return Astro.redirect('/login');
+
+let mensagem = '';
+let erro = '';
+
+if (Astro.request.method === 'POST') {
+    try {
+        const formData = await Astro.request.formData();
+        const file = formData.get('csv_file');
+        const userId = Astro.cookies.get('user_session')?.value;
+
+        if (!file || file.size === 0) {
+            erro = "Por favor, selecione um arquivo CSV.";
+        } else {
+            const text = await file.text();
+            
+            const result = Papa.parse(text, { 
+                header: true, 
+                skipEmptyLines: true,
+                transformHeader: h => h.trim().toLowerCase()
+            });
+
+            if (result.errors.length > 0) {
+                erro = "Erro ao ler o arquivo. Verifique o formato.";
+            } else {
+                const transacoesFormatadas = result.data.map(row => {
+                    let valorLimpo = row.valor || row.amount || '0';
+                    valorLimpo = valorLimpo.toString().replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
+
+                    return {
+                        user_id: userId,
+                        date: row.data || row.date || new Date().toLocaleDateString('pt-BR'),
+                        description: row.descricao || row.description || 'Importado',
+                        amount: parseFloat(valorLimpo),
+                        type: (row.tipo || row.type || '').toLowerCase().includes('ent') ? 'entrada' : 'saida',
+                        category: row.categoria || row.category || 'Importação'
+                    };
+                });
+
+                const validas = transacoesFormatadas.filter(t => t.amount > 0);
+
+                if (validas.length > 0) {
+                    await importTransactions(validas);
+                    return Astro.redirect('/dashboard?msg=import_sucesso');
+                } else {
+                    erro = "Nenhuma transação válida encontrada. Use o modelo padrão.";
+                }
+            }
+        }
+    } catch (e) {
+        console.error(e);
+        erro = "Erro interno ao processar arquivo.";
+    }
+}
+
+// Conteúdo do CSV Modelo (Codificado para URL)
+const csvContent = "data,descricao,valor,tipo,categoria%0A20/11/2025,Salário Exemplo,5000,entrada,Trabalho%0A21/11/2025,Mercado Exemplo,450.50,saida,Alimentação";
+---
+
+<Layout>
+    <div class="p-6 bg-blue-900/20 border-b border-blue-800/30 flex items-center gap-4">
+        <a href="/dashboard" class="p-2 bg-blue-900 rounded-lg text-blue-400 hover:bg-blue-800">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+        </a>
+        <h1 class="text-xl font-bold text-blue-50">Importar Dados</h1>
+    </div>
+
+    <main class="max-w-2xl mx-auto px-4 py-8 space-y-8">
+
+        <div class="bg-blue-900/40 p-6 rounded-2xl border border-blue-800/50">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                        <span class="bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span>
+                        Baixe a Planilha Modelo
+                    </h2>
+                    <p class="text-blue-200 text-sm mb-4">
+                        Para não dar erro, baixe nosso modelo padrão, preencha no Excel/Google Sheets e salve como <strong>.CSV</strong>.
+                    </p>
+                </div>
+            </div>
+            
+            <a href={`data:text/csv;charset=utf-8,${csvContent}`} download="modelo_importacao_storm.csv" class="flex items-center justify-center gap-2 w-full bg-white/10 hover:bg-white/20 text-white border border-white/20 border-dashed py-3 rounded-xl transition-all font-bold">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4 4m4-4v12" />
+                </svg>
+                Baixar Modelo .CSV
+            </a>
+        </div>
+
+        <div class="bg-blue-900/40 p-6 rounded-2xl border border-blue-800/50">
+            <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <span class="bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">2</span>
+                Envie o arquivo preenchido
+            </h2>
+
+            <div class="bg-white/5 p-8 rounded-3xl border-2 border-dashed border-blue-500/30 text-center hover:border-blue-500/60 transition-colors">
+                
+                {erro && (
+                    <div class="bg-red-500/20 text-red-300 p-3 rounded-lg mb-4 text-sm font-bold border border-red-500/30 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                        {erro}
+                    </div>
+                )}
+    
+                <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                    <div class="space-y-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-blue-400 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <label class="block">
+                            <span class="sr-only">Escolher arquivo</span>
+                            <input type="file" name="csv_file" accept=".csv" required
+                                class="block w-full text-sm text-blue-300
+                                file:mr-4 file:py-2 file:px-4
+                                file:rounded-full file:border-0
+                                file:text-sm file:font-semibold
+                                file:bg-blue-500 file:text-white
+                                file:hover:bg-blue-400
+                                cursor-pointer
+                            "/>
+                        </label>
+                        <p class="text-xs text-blue-400">Apenas arquivos .CSV</p>
+                    </div>
+    
+                    <button type="submit" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-600/20 transition-transform active:scale-95">
+                        Processar Importação
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    </main>
+</Layout>

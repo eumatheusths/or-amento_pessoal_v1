@@ -1,0 +1,62 @@
+---
+import '../styles/global.css';
+
+const currentPath = Astro.url.pathname;
+const activeClass = (path) => currentPath === path ? "text-blue-400 scale-110 drop-shadow-[0_0_10px_rgba(96,165,250,0.5)]" : "text-blue-400/40 hover:text-blue-300";
+---
+
+<!doctype html>
+<html lang="pt-br">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="generator" content={Astro.generator} />
+		<title>Minhas Finanças</title>
+	</head>
+	<body class="bg-blue-950 text-blue-50 selection:bg-blue-500 selection:text-white">
+		
+        <div class="pb-32 min-h-screen flex flex-col">
+            <div class="flex-1"><slot /></div>
+            
+            <footer class="text-center py-8 mt-8 border-t border-blue-900/50">
+                <p class="text-xs text-blue-400/60 mb-1">Gestão Financeira Inteligente</p>
+                <a href="https://stormmidia.com.br/" target="_blank" class="inline-flex items-center gap-2 text-sm font-bold text-blue-300 hover:text-white transition-colors group">
+                    <span>⚡ Desenvolvido por Storm Mídia</span>
+                </a>
+            </footer>
+        </div>
+
+        <nav class="fixed bottom-0 left-0 w-full bg-blue-950/90 backdrop-blur-md border-t border-blue-800/50 pb-safe z-50">
+            <div class="max-w-lg mx-auto px-4 h-20 flex justify-between items-center">
+                
+                <a href="/dashboard" class={`flex flex-col items-center gap-1 transition-all duration-300 ${activeClass('/dashboard')}`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                    <span class="text-[10px] font-medium">Início</span>
+                </a>
+
+                <a href="/relatorio" class={`flex flex-col items-center gap-1 transition-all duration-300 ${activeClass('/relatorio')}`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                    <span class="text-[10px] font-medium">Relatório</span>
+                </a>
+
+                <div class="relative -top-6 px-2">
+                    <a href="/adicionar" class="w-14 h-14 bg-blue-500 hover:bg-blue-400 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/40 text-white transition-transform hover:scale-110 active:scale-95 ring-4 ring-blue-950">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                    </a>
+                </div>
+
+                <a href="/investimentos" class={`flex flex-col items-center gap-1 transition-all duration-300 ${activeClass('/investimentos')}`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                    <span class="text-[10px] font-medium">Investir</span>
+                </a>
+
+                <a href="/logout" class="flex flex-col items-center gap-1 transition-all duration-300 text-blue-400/40 hover:text-red-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                    <span class="text-[10px] font-medium">Sair</span>
+                </a>
+
+            </div>
+        </nav>
+	</body>
+</html>
