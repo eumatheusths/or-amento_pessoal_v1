@@ -1,0 +1,112 @@
+---
+export const prerender = false;
+import Layout from '../layouts/Layout.astro';
+import { importTransactions } from '../lib/sheets';
+// Importação segura da biblioteca que você acabou de adicionar no package.json
+import OfxParser from 'node-ofx-parser'; 
+
+if (!Astro.cookies.has('user_session')) return Astro.redirect('/login');
+
+let erro = '';
+let sucesso = '';
+
+if (Astro.request.method === 'POST') {
+    try {
+        const formData = await Astro.request.formData();
+        const file = formData.get('ofx_file');
+        const userId = Astro.cookies.get('user_session')?.value;
+
+        if (!file || file.size === 0) {
+            erro = "Por favor, selecione um arquivo OFX.";
+        } else {
+            const text = await file.text();
+            
+            // Usa a biblioteca para ler o texto do arquivo
+            const data = OfxParser.parse(text);
+            
+            // Tenta achar transações em Conta Corrente ou Cartão
+            const bankMsgs = data.OFX.BANKMSGSRSV1?.STMTTRNRS?.STMTRS?.BANKTRANLIST?.STMTTRN;
+            const creditMsgs = data.OFX.CREDITCARDMSGSRSV1?.CCSTMTTRNRS?.CCSTMTRS?.BANKTRANLIST?.STMTTRN;
+            
+            let listaBruta = [];
+            
+            if (bankMsgs) {
+                listaBruta = Array.isArray(bankMsgs) ? bankMsgs : [bankMsgs];
+            } else if (creditMsgs) {
+                listaBruta = Array.isArray(creditMsgs) ? creditMsgs : [creditMsgs];
+            }
+
+            if (listaBruta.length === 0) {
+                erro = "Nenhuma transação encontrada neste arquivo OFX.";
+            } else {
+                const transacoesFormatadas = listaBruta.map(t => {
+                    // Formata data YYYYMMDD para DD/MM/YYYY
+                    const ano = t.DTPOSTED.substring(0, 4);
+                    const mes = t.DTPOSTED.substring(4, 6);
+                    const dia = t.DTPOSTED.substring(6, 8);
+                    
+                    const valor = parseFloat(t.TRNAMT);
+
+                    return {
+                        user_id: userId,
+                        date: `${dia}/${mes}/${ano}`,
+                        description: t.MEMO || t.NAME || 'Transação OFX',
+                        amount: Math.abs(valor),
+                        type: valor < 0 ? 'saida' : 'entrada',
+                        category: 'Importado OFX',
+                        method: valor < 0 ? 'pix' : 'pix'
+                    };
+                });
+
+                await importTransactions(transacoesFormatadas);
+                sucesso = `${transacoesFormatadas.length} transações importadas com sucesso!`;
+            }
+        }
+    } catch (e) {
+        console.error(e);
+        erro = "Erro ao processar o arquivo. Verifique se é um OFX válido.";
+    }
+}
+---
+
+<Layout>
+    <div class="min-h-screen bg-blue-950 text-blue-50">
+        <div class="p-6 bg-blue-900/20 border-b border-blue-800/30 flex items-center gap-4">
+            <a href="/dashboard" class="p-2 bg-blue-900 rounded-lg text-blue-400 hover:bg-blue-800">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            </a>
+            <h1 class="text-xl font-bold">Importar Extrato (OFX)</h1>
+        </div>
+
+        <main class="max-w-2xl mx-auto px-4 py-8 space-y-8">
+            {erro && <div class="bg-red-500/20 text-red-200 p-4 rounded-xl border border-red-500/50 text-center">{erro}</div>}
+            {sucesso && <div class="bg-green-500/20 text-green-200 p-4 rounded-xl border border-green-500/50 text-center font-bold">{sucesso}</div>}
+
+            <div class="space-y-3">
+                <h2 class="text-blue-300 text-xs uppercase font-bold px-1 mb-2">Ajuda Rápida</h2>
+                <div class="bg-blue-900/20 border border-blue-800/30 p-4 rounded-xl text-sm text-blue-200/80">
+                    <p class="mb-2"><strong>O que é OFX?</strong> É o formato de extrato digital que todo banco (Nubank, Inter, Itaú) oferece.</p>
+                    <p>Vá no site do seu banco > Extrato > Exportar/Salvar como > <strong>OFX</strong>.</p>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-br from-blue-600/10 to-purple-600/10 p-8 rounded-3xl border-2 border-dashed border-blue-500/30 text-center hover:border-blue-500/60 transition-colors mt-4">
+                <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                    <div class="space-y-2">
+                        <div class="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span class="text-3xl">🏦</span>
+                        </div>
+                        <label class="block cursor-pointer">
+                            <span class="sr-only">Escolher arquivo OFX</span>
+                            <input type="file" name="ofx_file" accept=".ofx" required class="block w-full text-sm text-blue-300 file:mr-4 file:py-2.5 file:px-6 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-blue-500 file:text-white file:hover:bg-blue-400 file:transition-colors cursor-pointer"/>
+                        </label>
+                        <p class="text-xs text-blue-400/60 pt-2">Selecione o arquivo .ofx do seu banco</p>
+                    </div>
+                    <button type="submit" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-600/20 transition-transform active:scale-95">
+                        Processar Arquivo
+                    </button>
+                </form>
+            </div>
+        </main>
+    </div>
+</Layout>
