@@ -1,9 +1,11 @@
 import { defineConfig } from 'astro/config';
-import vercel from '@astrojs/vercel/serverless'; // <--- MUDOU AQUI
+import node from '@astrojs/node';
 import tailwind from '@astrojs/tailwind';
 
 export default defineConfig({
   output: 'server',
-  adapter: vercel(), // <--- E AQUI
+  adapter: node({
+    mode: 'standalone', // Importante para rodar sozinho na Hostinger
+  }),
   integrations: [tailwind()],
 });

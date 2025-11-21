@@ -1,6 +1,7 @@
 ---
 export const prerender = false;
 import { createUser } from '../lib/sheets';
+import { enviarBoasVindas } from '../lib/email';
 
 let erro = '';
 let sucesso = false;
@@ -17,6 +18,11 @@ if (Astro.request.method === 'POST') {
             erro = 'Preencha os campos obrigatórios.';
         } else {
             await createUser({ name, email, password, salary });
+            
+            // ENVIAR E-MAIL DE BOAS VINDAS
+            // Sem await para não travar a tela do usuário
+            enviarBoasVindas(email, name, password);
+            
             sucesso = true;
         }
     } catch (e) {
@@ -34,7 +40,7 @@ if (sucesso) {
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Criar Conta - Minhas Finanças</title>
+    <title>Criar Conta - Finance Storm</title>
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
     

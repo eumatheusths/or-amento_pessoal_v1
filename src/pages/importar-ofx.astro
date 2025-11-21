@@ -9,6 +9,21 @@ if (!Astro.cookies.has('user_session')) return Astro.redirect('/login');
 let erro = '';
 let sucesso = '';
 
+// FUNÇÃO INTELIGENTE DE CATEGORIZAÇÃO
+function adivinharCategoria(descricao) {
+    const d = descricao.toLowerCase();
+    
+    if (d.includes('uber') || d.includes('99') || d.includes('posto') || d.includes('combustivel') || d.includes('estacionamento') || d.includes('transport')) return 'Transporte';
+    if (d.includes('ifood') || d.includes('rappi') || d.includes('eats') || d.includes('mercado') || d.includes('superm') || d.includes('padaria') || d.includes('restaurante') || d.includes('lanchonete') || d.includes('bk ') || d.includes('mc donald')) return 'Alimentação';
+    if (d.includes('netflix') || d.includes('spotify') || d.includes('amazon') || d.includes('prime') || d.includes('cinema') || d.includes('jogo') || d.includes('steam') || d.includes('hbo')) return 'Lazer';
+    if (d.includes('farmacia') || d.includes('drogaria') || d.includes('medico') || d.includes('hospital') || d.includes('saude')) return 'Saúde';
+    if (d.includes('aluguel') || d.includes('condominio') || d.includes('luz') || d.includes('energia') || d.includes('agua') || d.includes('saneago') || d.includes('internet') || d.includes('claro') || d.includes('vivo') || d.includes('tim') || d.includes('oi ')) return 'Contas';
+    if (d.includes('curso') || d.includes('faculdade') || d.includes('escola') || d.includes('udemy') || d.includes('alura')) return 'Educação';
+    if (d.includes('salario') || d.includes('pagamento') || d.includes('remuneracao')) return 'Salário';
+    
+    return 'Outros'; // Se não souber, joga pra Outros
+}
+
 if (Astro.request.method === 'POST') {
     try {
         const formData = await Astro.request.formData();
@@ -36,25 +51,30 @@ if (Astro.request.method === 'POST') {
                     const mes = t.DTPOSTED.substring(4, 6);
                     const dia = t.DTPOSTED.substring(6, 8);
                     const valor = parseFloat(t.TRNAMT);
+                    
+                    // Usa a descrição do OFX para tentar adivinhar a categoria
+                    const descricao = t.MEMO || t.NAME || 'Transação OFX';
+                    const categoriaAuto = adivinharCategoria(descricao);
 
                     return {
                         user_id: userId,
                         date: `${dia}/${mes}/${ano}`,
-                        description: t.MEMO || t.NAME || 'Transação OFX',
+                        description: descricao,
                         amount: Math.abs(valor),
                         type: valor < 0 ? 'saida' : 'entrada',
-                        category: 'Importado OFX',
-                        method: valor < 0 ? 'pix' : 'pix'
+                        category: categoriaAuto, // <--- AQUI ESTÁ A MÁGICA
+                        method: creditMsgs ? 'credit' : 'pix'
                     };
                 });
 
-                await importTransactions(transacoesFormatadas);
-                sucesso = `${transacoesFormatadas.length} lançamentos importados!`;
+                const qtd = await importTransactions(transacoesFormatadas);
+                if(qtd > 0) sucesso = `${qtd} lançamentos novos importados e categorizados!`;
+                else sucesso = "Nenhum lançamento novo (todos já existiam).";
             }
         }
     } catch (e) {
         console.error(e);
-        erro = "Erro ao ler o arquivo. Verifique se é um extrato OFX válido.";
+        erro = "Erro ao ler arquivo. Verifique se é um OFX válido.";
     }
 }
 ---
@@ -64,7 +84,7 @@ if (Astro.request.method === 'POST') {
         <a href="/dashboard" class="p-2 bg-blue-900 rounded-lg text-blue-400 hover:bg-blue-800 transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
         </a>
-        <h1 class="text-xl font-bold text-blue-50">Importação Inteligente</h1>
+        <h1 class="text-xl font-bold text-blue-50">Importação Inteligente (OFX)</h1>
     </div>
 
     <main class="max-w-3xl mx-auto px-4 py-8 space-y-8 pb-32">
@@ -73,20 +93,20 @@ if (Astro.request.method === 'POST') {
         {sucesso && <div class="bg-green-500/20 text-green-200 p-4 rounded-xl border border-green-500/50 text-center font-bold flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>{sucesso}</div>}
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-blue-900/30 p-5 rounded-2xl border border-blue-800/50 hover:bg-blue-800/30 transition-colors">
-                <div class="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center text-blue-400 mb-3 text-xl">⚡</div>
-                <h3 class="font-bold text-blue-100 mb-1">Zero Erros</h3>
-                <p class="text-xs text-blue-300 leading-relaxed">Esqueça erros de digitação. O valor e a data vêm exatos do banco.</p>
+            <div class="bg-blue-900/30 p-5 rounded-2xl border border-blue-800/50">
+                <div class="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center text-blue-400 mb-3 text-xl">🧠</div>
+                <h3 class="font-bold text-blue-100 mb-1">Categorização Auto</h3>
+                <p class="text-xs text-blue-300 leading-relaxed">O sistema lê "Uber" e já marca como Transporte. Lê "iFood" e marca Alimentação.</p>
             </div>
-            <div class="bg-blue-900/30 p-5 rounded-2xl border border-blue-800/50 hover:bg-blue-800/30 transition-colors">
+            <div class="bg-blue-900/30 p-5 rounded-2xl border border-blue-800/50">
                 <div class="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center text-green-400 mb-3 text-xl">🔒</div>
-                <h3 class="font-bold text-blue-100 mb-1">100% Seguro</h3>
-                <p class="text-xs text-blue-300 leading-relaxed">Não pedimos sua senha bancária. Você baixa o arquivo e traz pra cá.</p>
+                <h3 class="font-bold text-blue-100 mb-1">Anti-Duplicidade</h3>
+                <p class="text-xs text-blue-300 leading-relaxed">Se você importar o mesmo arquivo duas vezes, o sistema ignora o que já foi salvo.</p>
             </div>
-            <div class="bg-blue-900/30 p-5 rounded-2xl border border-blue-800/50 hover:bg-blue-800/30 transition-colors">
+            <div class="bg-blue-900/30 p-5 rounded-2xl border border-blue-800/50">
                 <div class="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center text-purple-400 mb-3 text-xl">🚀</div>
                 <h3 class="font-bold text-blue-100 mb-1">Agilidade</h3>
-                <p class="text-xs text-blue-300 leading-relaxed">Importe 100 lançamentos em 2 segundos. Ganhe tempo de vida.</p>
+                <p class="text-xs text-blue-300 leading-relaxed">Importe 100 lançamentos em segundos com dados exatos do banco.</p>
             </div>
         </div>
 
@@ -98,58 +118,14 @@ if (Astro.request.method === 'POST') {
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                     </div>
-                    
                     <label class="block cursor-pointer">
                         <span class="sr-only">Escolher arquivo OFX</span>
-                        <input type="file" name="ofx_file" accept=".ofx" required
-                            class="block w-full text-sm text-blue-300
-                            file:mr-4 file:py-3 file:px-6
-                            file:rounded-xl file:border-0
-                            file:text-sm file:font-bold
-                            file:bg-blue-600 file:text-white
-                            file:hover:bg-blue-500 file:transition-colors
-                            cursor-pointer text-center mx-auto
-                        "/>
+                        <input type="file" name="ofx_file" accept=".ofx" required class="block w-full text-sm text-blue-300 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-blue-600 file:text-white file:hover:bg-blue-500 file:transition-colors cursor-pointer text-center mx-auto"/>
                     </label>
                     <p class="text-xs text-blue-400/60 pt-2">Extrato Bancário (.ofx)</p>
                 </div>
-
-                <button type="submit" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-600/20 transition-all active:scale-[0.98] mt-4">
-                    Processar Arquivo
-                </button>
+                <button type="submit" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-600/20 transition-all active:scale-[0.98] mt-4">Processar Arquivo</button>
             </form>
-        </div>
-
-        <div class="space-y-4">
-            <h2 class="text-blue-200 text-sm font-bold uppercase tracking-wider px-1">Como conseguir o arquivo?</h2>
-            
-            <div class="bg-blue-900/20 rounded-2xl p-1">
-                <details class="group">
-                    <summary class="flex items-center justify-between p-4 cursor-pointer hover:bg-blue-900/40 rounded-xl transition-colors font-medium text-blue-100">
-                        <div class="flex items-center gap-3">
-                            <span class="w-8 h-8 bg-purple-700 rounded-lg flex items-center justify-center text-white font-bold text-xs">NU</span>
-                            <span>Nubank</span>
-                        </div>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 transition-transform group-open:rotate-180 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                    </summary>
-                    <div class="p-4 pt-0 pl-14 text-sm text-blue-300 leading-relaxed border-l-2 border-blue-800/50 ml-8 mb-4">
-                        Acesse pelo Site (Computador) > Clique no seu nome > Extrato > Escolha o mês > Clique em "Exportar" > Escolha <strong>OFX</strong>.
-                    </div>
-                </details>
-
-                <details class="group">
-                    <summary class="flex items-center justify-between p-4 cursor-pointer hover:bg-blue-900/40 rounded-xl transition-colors font-medium text-blue-100">
-                        <div class="flex items-center gap-3">
-                            <span class="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center text-white font-bold text-xs">IT</span>
-                            <span>Itaú / Inter / Bradesco</span>
-                        </div>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 transition-transform group-open:rotate-180 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                    </summary>
-                    <div class="p-4 pt-0 pl-14 text-sm text-blue-300 leading-relaxed border-l-2 border-blue-800/50 ml-8 mb-4">
-                        Geralmente disponível no Internet Banking pelo computador. Procure por "Salvar em Outros Formatos", "Money 2000" ou "Gerenciadores Financeiros".
-                    </div>
-                </details>
-            </div>
         </div>
 
     </main>

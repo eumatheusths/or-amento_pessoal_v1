@@ -1,15 +1,19 @@
 ---
 export const prerender = false;
 import Layout from '../layouts/Layout.astro';
-import { addTransaction } from '../lib/sheets';
+import { addTransaction, getCategories } from '../lib/sheets';
 
 if (!Astro.cookies.has('user_session')) return Astro.redirect('/login');
+const userId = Astro.cookies.get('user_session')?.value;
+
+// Busca categorias (Padrão + Personalizadas)
+const categorias = await getCategories(userId);
+const catsEntrada = categorias.filter(c => c.type === 'entrada');
+const catsSaida = categorias.filter(c => c.type === 'saida');
 
 if (Astro.request.method === 'POST') {
     const formData = await Astro.request.formData();
-    const userId = Astro.cookies.get('user_session')?.value;
     const isPending = formData.get('is_pending') === 'on';
-    
     const dataLancamento = formData.get('date')?.toString(); 
     const [ano, mes, dia] = dataLancamento.split('-');
 
@@ -21,10 +25,10 @@ if (Astro.request.method === 'POST') {
         category: formData.get('category'),
         date: dataLancamento, 
         status: isPending ? 'pendente' : 'pago',
-        method: formData.get('method')
+        method: formData.get('method'),
+        repeat: formData.get('repeat') // Recorrência
     });
 
-    // Redireciona para o mês correto
     return Astro.redirect(`/dashboard?mes=${parseInt(mes)}&ano=${ano}`);
 }
 
@@ -34,25 +38,25 @@ const hoje = new Date().toISOString().split('T')[0];
 <Layout>
     <div class="min-h-screen bg-blue-950 flex flex-col text-blue-50">
         <div class="p-4 flex items-center gap-4">
-            <a href="javascript:history.back()" class="p-2 bg-blue-900 rounded-full hover:bg-blue-800 transition-colors">
+            <a href="javascript:history.back()" class="p-2 bg-blue-900 rounded-full hover:bg-blue-800">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
             </a>
-            <h1 class="text-xl font-bold">Nova Movimentação</h1>
+            <h1 class="text-xl font-bold">Lançar</h1>
         </div>
 
         <div class="flex-1 p-6 flex items-center justify-center">
-            <form method="POST" class="w-full max-w-md space-y-6">
+            <form method="POST" class="w-full max-w-md space-y-5">
                 
                 <div class="grid grid-cols-2 gap-4">
                     <label class="cursor-pointer">
-                        <input type="radio" name="type" value="saida" class="peer hidden" checked>
+                        <input type="radio" name="type" value="saida" class="peer hidden" checked onclick="toggleCats('saida')">
                         <div class="py-3 text-center rounded-xl bg-blue-900 border-2 border-transparent peer-checked:border-red-500 peer-checked:bg-red-500/20 transition-all">
                             <span class="block text-xl mb-1">💸</span>
                             <span class="font-bold text-sm text-red-300">Despesa</span>
                         </div>
                     </label>
                     <label class="cursor-pointer">
-                        <input type="radio" name="type" value="entrada" class="peer hidden">
+                        <input type="radio" name="type" value="entrada" class="peer hidden" onclick="toggleCats('entrada')">
                         <div class="py-3 text-center rounded-xl bg-blue-900 border-2 border-transparent peer-checked:border-green-500 peer-checked:bg-green-500/20 transition-all">
                             <span class="block text-xl mb-1">💰</span>
                             <span class="font-bold text-sm text-green-300">Receita</span>
@@ -68,48 +72,39 @@ const hoje = new Date().toISOString().split('T')[0];
 
                 <div>
                     <label class="block text-xs text-blue-300 mb-1">Descrição</label>
-                    <input type="text" name="description" required placeholder="Ex: Mercado, Salário..." 
+                    <input type="text" name="description" required placeholder="Ex: Aluguel, Salário..." 
                         class="w-full bg-blue-900 border border-blue-800 text-white p-4 rounded-xl focus:outline-none focus:border-blue-500">
                 </div>
 
-                <div>
-                    <label class="block text-xs text-blue-300 mb-2">Como pagou?</label>
-                    <div class="grid grid-cols-2 gap-3">
-                        <label class="cursor-pointer">
-                            <input type="radio" name="method" value="pix" class="peer hidden" checked>
-                            <div class="flex items-center gap-2 p-3 rounded-xl bg-blue-900 border border-blue-800 peer-checked:bg-blue-600 peer-checked:border-blue-400 transition-all">
-                                <span class="text-lg">💵</span>
-                                <span class="text-sm font-bold">Pix / Débito</span>
-                            </div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="method" value="credit" class="peer hidden">
-                            <div class="flex items-center gap-2 p-3 rounded-xl bg-blue-900 border border-blue-800 peer-checked:bg-purple-600 peer-checked:border-purple-400 transition-all">
-                                <span class="text-lg">💳</span>
-                                <span class="text-sm font-bold">Crédito</span>
-                            </div>
-                        </label>
-                    </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="method" value="pix" class="peer hidden" checked>
+                        <div class="flex items-center gap-2 p-3 rounded-xl bg-blue-900 border border-blue-800 peer-checked:bg-blue-600 peer-checked:border-blue-400 transition-all">
+                            <span class="text-lg">💵</span><span class="text-sm font-bold">Pix / Débito</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="method" value="credit" class="peer hidden">
+                        <div class="flex items-center gap-2 p-3 rounded-xl bg-blue-900 border border-blue-800 peer-checked:bg-purple-600 peer-checked:border-purple-400 transition-all">
+                            <span class="text-lg">💳</span><span class="text-sm font-bold">Crédito</span>
+                        </div>
+                    </label>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs text-blue-300 mb-1">Categoria</label>
-                        <select name="category" class="w-full bg-blue-900 border border-blue-800 text-white p-3 rounded-xl focus:outline-none focus:border-blue-500 text-sm appearance-none">
-                            <optgroup label="Saídas">
-                                <option value="Contas">📄 Contas Fixas</option>
-                                <option value="Alimentação">🍔 Alimentação</option>
-                                <option value="Transporte">🚗 Transporte</option>
-                                <option value="Moradia">🏠 Moradia</option>
-                                <option value="Lazer">🎉 Lazer</option>
-                                <option value="Outros">📦 Outros</option>
-                            </optgroup>
-                            <optgroup label="Entradas">
-                                <option value="Salário">💰 Salário</option>
-                                <option value="Freelance">⚡ Extra</option>
-                                <option value="Investimentos">📈 Investimentos</option>
-                            </optgroup>
-                        </select>
+                        <div class="relative">
+                            <select name="category" id="cat-select" class="w-full bg-blue-900 border border-blue-800 text-white p-3 rounded-xl focus:outline-none focus:border-blue-500 text-sm appearance-none">
+                                <optgroup label="Saídas" id="opt-saida">
+                                    {catsSaida.map(c => <option value={c.name}>{c.name}</option>)}
+                                </optgroup>
+                                <optgroup label="Entradas" id="opt-entrada" style="display:none">
+                                    {catsEntrada.map(c => <option value={c.name}>{c.name}</option>)}
+                                </optgroup>
+                            </select>
+                            <a href="/categorias" class="absolute -bottom-5 right-0 text-[10px] text-blue-400 hover:text-white">+ Criar nova</a>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs text-blue-300 mb-1">Data</label>
@@ -118,17 +113,50 @@ const hoje = new Date().toISOString().split('T')[0];
                     </div>
                 </div>
 
-                <label class="flex items-center gap-3 cursor-pointer p-3 rounded-xl hover:bg-blue-900/50 border border-transparent hover:border-blue-800 transition-colors">
-                    <div class="relative flex items-center">
-                        <input type="checkbox" name="is_pending" class="peer h-5 w-5 rounded border-gray-500 text-blue-600 focus:ring-blue-500 bg-blue-900">
-                    </div>
-                    <span class="text-sm text-blue-200">Deixar como pendente (Agendar)</span>
-                </label>
+                <div class="bg-blue-900/30 p-4 rounded-xl border border-blue-800/50 space-y-3">
+                    <label class="flex items-center justify-between cursor-pointer">
+                        <span class="text-sm text-blue-200">Repetir este lançamento?</span>
+                        <select name="repeat" class="bg-blue-950 border border-blue-700 text-white text-xs p-1 rounded focus:outline-none">
+                            <option value="1">Não repetir</option>
+                            <option value="2">2x (Meses)</option>
+                            <option value="3">3x (Meses)</option>
+                            <option value="6">6x (Meses)</option>
+                            <option value="12">12x (Anual)</option>
+                            <option value="24">24x (2 Anos)</option>
+                        </select>
+                    </label>
+
+                    <label class="flex items-center gap-3 cursor-pointer pt-2 border-t border-blue-800/30">
+                        <div class="relative flex items-center">
+                            <input type="checkbox" name="is_pending" class="peer h-5 w-5 rounded border-gray-500 text-blue-600 focus:ring-blue-500 bg-blue-900">
+                        </div>
+                        <span class="text-sm text-blue-200">Deixar como Pendente (Agendar)</span>
+                    </label>
+                </div>
 
                 <button type="submit" class="w-full bg-blue-500 hover:bg-blue-400 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/30 mt-2 active:scale-95 transition-transform">
-                    Salvar
+                    Salvar Lançamento
                 </button>
             </form>
         </div>
     </div>
+
+    <script is:inline>
+        // Script para trocar as categorias dependendo do tipo (Entrada/Saída)
+        function toggleCats(type) {
+            const optSaida = document.getElementById('opt-saida');
+            const optEntrada = document.getElementById('opt-entrada');
+            const select = document.getElementById('cat-select');
+            
+            if (type === 'saida') {
+                optSaida.style.display = 'block';
+                optEntrada.style.display = 'none';
+                select.value = optSaida.firstElementChild?.value || '';
+            } else {
+                optSaida.style.display = 'none';
+                optEntrada.style.display = 'block';
+                select.value = optEntrada.firstElementChild?.value || '';
+            }
+        }
+    </script>
 </Layout>
