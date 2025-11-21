@@ -3,25 +3,19 @@ export const prerender = false;
 import Layout from '../layouts/Layout.astro';
 import { getUserTransactions } from '../lib/sheets';
 
-// 1. SEGURANÇA
 if (!Astro.cookies.has('user_session')) return Astro.redirect('/login');
 const userId = Astro.cookies.get('user_session')?.value;
 
-// 2. CONTROLE DE DATA
 const urlParams = Astro.url.searchParams;
 const hoje = new Date();
 const mesAtual = parseInt(urlParams.get('mes')) || (hoje.getMonth() + 1);
 const anoAtual = parseInt(urlParams.get('ano')) || hoje.getFullYear();
-
-// Parâmetros para voltar para o mesmo mês depois de pagar/deletar
 const paramsUrl = `?mes=${mesAtual}&ano=${anoAtual}`;
 
-// 3. BUSCA DADOS
 const transactions = await getUserTransactions(userId, mesAtual, anoAtual);
-
-// 4. CÁLCULOS
-const pendentes = transactions.filter(t => t.status === 'pendente').reverse();
-const historico = transactions.filter(t => t.status !== 'pendente');
+// Unimos tudo numa lista só para facilitar a busca, mas mantemos a ordem
+// Vamos renderizar tudo e o JS controla o que aparece
+const todasTransacoes = transactions; // O filtro visual será feito no front
 
 const totalEntradas = transactions.filter(t => t.type === 'entrada').reduce((acc, t) => acc + t.amount, 0);
 const totalSaidas = transactions.filter(t => t.type === 'saida').reduce((acc, t) => acc + t.amount, 0);
@@ -30,7 +24,6 @@ const porcentagemGasta = totalEntradas > 0 ? Math.min((totalSaidas / totalEntrad
 
 const money = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
-// Navegação
 const dataDisplay = new Date(anoAtual, mesAtual - 1, 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
 const prevDate = new Date(anoAtual, mesAtual - 2, 1);
 const nextDate = new Date(anoAtual, mesAtual, 1);
@@ -59,34 +52,17 @@ const linkNext = `/dashboard?mes=${nextDate.getMonth() + 1}&ano=${nextDate.getFu
 
     <main class="max-w-3xl mx-auto px-4 space-y-6 mt-4">
         
-        {totalEntradas === 0 && (
-            <div class="bg-orange-500/20 border border-orange-500/50 p-4 rounded-2xl flex items-center justify-between animate-pulse">
-                <div class="flex items-center gap-3">
-                    <span class="text-2xl">💸</span>
-                    <div>
-                        <p class="font-bold text-orange-100 text-sm">Mês sem renda?</p>
-                        <p class="text-xs text-orange-200">Lance seu salário ou ganhos.</p>
-                    </div>
-                </div>
-                <a href="/adicionar?tipo=entrada" class="bg-orange-500 text-white text-xs font-bold px-3 py-2 rounded-lg hover:bg-orange-600 transition-colors">
-                    Lançar
-                </a>
-            </div>
-        )}
-
         <div class="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-3xl shadow-xl relative overflow-hidden">
             <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl"></div>
             <p class="text-blue-100 text-sm font-medium mb-1 opacity-80">Saldo Previsto</p>
             <h2 class={`text-4xl font-bold tracking-tight mb-4 ${saldoPrevisto < 0 ? 'text-red-300' : 'text-white'}`}>
                 {money(saldoPrevisto)}
             </h2>
-            
             <div class="relative pt-1">
                 <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-blue-900/50">
                     <div style={`width:${porcentagemGasta}%`} class={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center transition-all duration-500 ${porcentagemGasta > 90 ? 'bg-red-400' : 'bg-green-400'}`}></div>
                 </div>
             </div>
-
             <div class="flex gap-4 pt-2 border-t border-white/10">
                 <div>
                     <span class="text-xs text-blue-200 block">Entradas</span>
@@ -99,97 +75,157 @@ const linkNext = `/dashboard?mes=${nextDate.getMonth() + 1}&ano=${nextDate.getFu
             </div>
         </div>
 
-        {pendentes.length > 0 && (
-            <div>
-                <h3 class="text-yellow-400 font-bold mb-3 flex items-center gap-2 px-2 text-sm uppercase tracking-wider">
-                    A Pagar ({pendentes.length})
-                </h3>
-                <div class="space-y-3">
-                    {pendentes.map(t => (
-                        <div class="bg-blue-900/60 border border-yellow-500/30 p-4 rounded-2xl flex justify-between items-center relative overflow-hidden group">
-                            <div class="absolute left-0 top-0 bottom-0 w-1 bg-yellow-500"></div>
-                            <div class="pl-3">
-                                <div class="flex items-center gap-2">
-                                    <p class="font-bold text-white text-sm">{t.description}</p>
-                                    {t.method === 'credit' && <span class="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded border border-purple-500/30">💳</span>}
-                                </div>
-                                <p class="text-xs text-yellow-200 font-medium">Vence dia {t.date.split('/')[0]}</p>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <p class="font-bold text-white mr-2">{money(t.amount)}</p>
-                                
-                                <form action={"/pagar" + paramsUrl} method="POST">
-                                    <input type="hidden" name="id" value={t.id} />
-                                    <button title="Pagar" class="bg-green-500 hover:bg-green-400 text-white p-2 rounded-lg shadow-lg transition-transform active:scale-95">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                                    </button>
-                                </form>
-
-                                <a href={`/editar?id=${t.id}`} class="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-lg transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                                </a>
-
-                                <form action={"/deletar" + paramsUrl} method="POST" onsubmit="return confirm('Apagar agendamento?')">
-                                    <input type="hidden" name="id" value={t.id} />
-                                    <button class="bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white p-2 rounded-lg transition-colors">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+        <div class="space-y-3">
+            <div class="relative">
+                <input type="text" id="search-input" placeholder="Buscar conta, mercado, freela..." 
+                    class="w-full bg-blue-900/40 border border-blue-800/50 text-white text-sm rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:border-blue-500 focus:bg-blue-900/60 transition-all placeholder-blue-400/50">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-blue-400 absolute left-3 top-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
             </div>
-        )}
 
-        <div>
-            <h3 class="text-blue-200 font-bold mb-3 flex items-center gap-2 px-2 text-sm uppercase tracking-wider">
-                Histórico do Mês
-            </h3>
-            <div class="space-y-3">
-                {historico.length === 0 ? (
-                    <div class="text-center py-8 text-blue-400/50 border-2 border-dashed border-blue-900 rounded-xl">
-                        <p>Nenhuma movimentação neste mês.</p>
-                    </div>
-                ) : (
-                    historico.map(t => (
-                        <div class="bg-blue-900/30 border border-blue-800/30 p-4 rounded-2xl flex justify-between items-center hover:bg-blue-900/50 transition-colors">
-                            <div class="flex items-center gap-3">
-                                <div class={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${t.type === 'entrada' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                                    {t.type === 'entrada' ? '↑' : '↓'}
-                                </div>
-                                <div>
-                                    <div class="flex items-center gap-2">
-                                        <p class="font-bold text-white text-sm">{t.description}</p>
-                                        {t.method === 'credit' && <span class="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded border border-purple-500/30">💳</span>}
-                                    </div>
-                                    <div class="flex items-center gap-2 text-xs text-blue-400/70">
-                                        <span>{t.date}</span>
-                                        <span class="capitalize">• {t.status}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-center gap-2">
-                                <p class={`font-bold text-sm mr-2 ${t.type === 'entrada' ? 'text-green-400' : 'text-white'}`}>
-                                    {t.type === 'saida' && '- '}{money(t.amount)}
-                                </p>
-
-                                <a href={`/editar?id=${t.id}`} class="bg-blue-600 hover:bg-blue-500 text-white p-1.5 rounded-lg transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                                </a>
-
-                                <form action={"/deletar" + paramsUrl} method="POST" onsubmit="return confirm('Excluir item?')">
-                                    <input type="hidden" name="id" value={t.id} />
-                                    <button class="bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white p-1.5 rounded-lg transition-colors">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    ))
-                )}
+            <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                <button onclick="filterType('all')" id="btn-all" class="filter-btn active px-4 py-1.5 rounded-lg text-xs font-bold bg-blue-500 text-white transition-all border border-blue-500">
+                    Todos
+                </button>
+                <button onclick="filterType('entrada')" id="btn-entrada" class="filter-btn px-4 py-1.5 rounded-lg text-xs font-bold bg-blue-900/40 text-blue-300 border border-blue-800/50 hover:bg-blue-800 transition-all">
+                    Entradas
+                </button>
+                <button onclick="filterType('saida')" id="btn-saida" class="filter-btn px-4 py-1.5 rounded-lg text-xs font-bold bg-blue-900/40 text-blue-300 border border-blue-800/50 hover:bg-blue-800 transition-all">
+                    Saídas
+                </button>
+                <button onclick="filterType('pendente')" id="btn-pendente" class="filter-btn px-4 py-1.5 rounded-lg text-xs font-bold bg-blue-900/40 text-blue-300 border border-blue-800/50 hover:bg-blue-800 transition-all">
+                    A Pagar
+                </button>
             </div>
         </div>
+
+        <div id="lista-transacoes" class="space-y-3 min-h-[200px]">
+            {todasTransacoes.map(t => (
+                <div class="transacao-item bg-blue-900/30 border border-blue-800/30 p-4 rounded-2xl flex justify-between items-center hover:bg-blue-900/50 transition-colors" 
+                     data-type={t.type} 
+                     data-status={t.status}
+                     data-desc={t.description.toLowerCase()}
+                     data-cat={t.category.toLowerCase()}>
+                    
+                    <div class="flex items-center gap-3">
+                        <div class={`w-10 h-10 rounded-full flex items-center justify-center text-lg shrink-0 ${t.type === 'entrada' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                            {t.type === 'entrada' ? '↑' : '↓'}
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <p class="font-bold text-white text-sm line-clamp-1">{t.description}</p>
+                                {t.method === 'credit' && <span class="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded border border-purple-500/30">💳</span>}
+                                {t.status === 'pendente' && <span class="text-[10px] bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded border border-yellow-500/30">⏳</span>}
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-blue-400/70">
+                                <span>{t.date}</span>
+                                <span class="capitalize">• {t.category}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col items-end gap-1 pl-2">
+                        <p class={`font-bold text-sm whitespace-nowrap ${t.type === 'entrada' ? 'text-green-400' : 'text-white'}`}>
+                            {t.type === 'saida' && '- '}{money(t.amount)}
+                        </p>
+
+                        <div class="flex items-center gap-1 opacity-70 hover:opacity-100">
+                            {t.status === 'pendente' && (
+                                <form action={"/pagar" + paramsUrl} method="POST">
+                                    <input type="hidden" name="id" value={t.id} />
+                                    <button title="Pagar" class="bg-green-600/80 hover:bg-green-500 text-white p-1.5 rounded-lg transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                    </button>
+                                </form>
+                            )}
+                            <a href={`/editar?id=${t.id}`} class="bg-blue-600/80 hover:bg-blue-500 text-white p-1.5 rounded-lg transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                            </a>
+                            <form action={"/deletar" + paramsUrl} method="POST" onsubmit="return confirm('Excluir?')">
+                                <input type="hidden" name="id" value={t.id} />
+                                <button class="bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white p-1.5 rounded-lg transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            ))}
+            
+            {todasTransacoes.length === 0 && (
+                <div class="text-center py-10 text-blue-400/50 border-2 border-dashed border-blue-900 rounded-xl">
+                    <p>Nada lançado neste mês.</p>
+                </div>
+            )}
+            
+            <div id="no-results" class="hidden text-center py-10 text-blue-400/50">
+                <p>Nenhum lançamento encontrado com esse filtro.</p>
+            </div>
+        </div>
+
     </main>
+
+    <script is:inline>
+        const searchInput = document.getElementById('search-input');
+        const items = document.querySelectorAll('.transacao-item');
+        const noResults = document.getElementById('no-results');
+        const buttons = document.querySelectorAll('.filter-btn');
+        let currentType = 'all';
+
+        // 1. Função de Filtrar
+        function filterItems() {
+            const term = searchInput.value.toLowerCase();
+            let visibleCount = 0;
+
+            items.forEach(item => {
+                const desc = item.getAttribute('data-desc');
+                const cat = item.getAttribute('data-cat');
+                const type = item.getAttribute('data-type');
+                const status = item.getAttribute('data-status');
+
+                // Verifica Texto
+                const matchesText = desc.includes(term) || cat.includes(term);
+                
+                // Verifica Tipo
+                let matchesType = true;
+                if (currentType === 'entrada') matchesType = type === 'entrada';
+                if (currentType === 'saida') matchesType = type === 'saida';
+                if (currentType === 'pendente') matchesType = status === 'pendente';
+
+                if (matchesText && matchesType) {
+                    item.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+
+            // Mostra msg se não achou nada
+            if (visibleCount === 0 && items.length > 0) {
+                noResults.classList.remove('hidden');
+            } else {
+                noResults.classList.add('hidden');
+            }
+        }
+
+        // 2. Evento de Digitação
+        searchInput.addEventListener('input', filterItems);
+
+        // 3. Evento dos Botões (Global function para o onclick)
+        window.filterType = (type) => {
+            currentType = type;
+            
+            // Atualiza estilo dos botões
+            buttons.forEach(btn => {
+                btn.classList.remove('bg-blue-500', 'text-white');
+                btn.classList.add('bg-blue-900/40', 'text-blue-300');
+            });
+            const activeBtn = document.getElementById('btn-' + type);
+            activeBtn.classList.remove('bg-blue-900/40', 'text-blue-300');
+            activeBtn.classList.add('bg-blue-500', 'text-white');
+
+            filterItems();
+        };
+    </script>
 </Layout>
