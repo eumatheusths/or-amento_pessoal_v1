@@ -10,20 +10,20 @@ if (!Astro.cookies.has('user_session')) {
 const id = Astro.url.searchParams.get('id');
 let transacao = null;
 
-// Busca dados para preencher o formulário
 if (id) {
     transacao = await getTransactionById(id);
 }
 
-// Se não achar a transação, volta pro dashboard
 if (!transacao && Astro.request.method === 'GET') {
     return Astro.redirect('/dashboard');
 }
 
-// Processa o salvamento
 if (Astro.request.method === 'POST') {
     const formData = await Astro.request.formData();
     
+    const dataLancamento = formData.get('date')?.toString(); 
+    const [ano, mes, dia] = dataLancamento.split('-');
+
     await updateTransaction({
         id: formData.get('id'),
         type: formData.get('type'),
@@ -31,17 +31,19 @@ if (Astro.request.method === 'POST') {
         description: formData.get('description'),
         category: formData.get('category'),
         date: formData.get('date'),
-        status: formData.get('status') // Mantém o status original ou atualiza se precisar
+        status: formData.get('status'),
+        method: formData.get('method')
     });
 
-    return Astro.redirect('/dashboard');
+    // Redireciona para o mês correto
+    return Astro.redirect(`/dashboard?mes=${parseInt(mes)}&ano=${ano}`);
 }
 ---
 
 <Layout>
     <div class="min-h-screen bg-blue-950 flex flex-col text-blue-50">
         <div class="p-4 flex items-center gap-4">
-            <a href="/dashboard" class="p-2 bg-blue-900 rounded-full hover:bg-blue-800 transition-colors">
+            <a href="javascript:history.back()" class="p-2 bg-blue-900 rounded-full hover:bg-blue-800 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
             </a>
             <h1 class="text-xl font-bold">Editar Lançamento</h1>
@@ -76,34 +78,54 @@ if (Astro.request.method === 'POST') {
                 </div>
 
                 <div>
-                    <label class="block text-sm text-blue-300 mb-1">Data</label>
-                    <input type="date" name="date" required value={transacao.date}
-                        class="w-full bg-blue-900 border border-blue-800 text-white p-4 rounded-xl focus:outline-none focus:border-blue-500">
-                </div>
-
-                <div>
                     <label class="block text-sm text-blue-300 mb-1">Descrição</label>
                     <input type="text" name="description" required value={transacao.description}
                         class="w-full bg-blue-900 border border-blue-800 text-white p-4 rounded-xl focus:outline-none focus:border-blue-500">
                 </div>
 
                 <div>
-                    <label class="block text-sm text-blue-300 mb-1">Categoria</label>
-                    <select name="category" class="w-full bg-blue-900 border border-blue-800 text-white p-4 rounded-xl focus:outline-none focus:border-blue-500 appearance-none">
-                        <option value={transacao.category} selected hidden>{transacao.category}</option> <optgroup label="Entradas">
-                            <option value="Salário">💰 Salário Mensal</option>
-                            <option value="Freelance">⚡ Renda Extra / Freela</option>
-                            <option value="Investimentos">📈 Investimentos</option>
-                        </optgroup>
-                        <optgroup label="Saídas">
-                            <option value="Contas">📄 Contas Fixas</option>
-                            <option value="Alimentação">🍔 Alimentação</option>
-                            <option value="Transporte">🚗 Transporte</option>
-                            <option value="Moradia">🏠 Moradia</option>
-                            <option value="Lazer">🎉 Lazer</option>
-                            <option value="Outros">📦 Outros</option>
-                        </optgroup>
-                    </select>
+                    <label class="block text-xs text-blue-300 mb-2">Como pagou?</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="method" value="pix" class="peer hidden" checked={transacao.method !== 'credit'}>
+                            <div class="flex items-center gap-2 p-3 rounded-xl bg-blue-900 border border-blue-800 peer-checked:bg-blue-600 peer-checked:border-blue-400 transition-all">
+                                <span class="text-lg">💵</span>
+                                <span class="text-sm font-bold">Pix / Débito</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="method" value="credit" class="peer hidden" checked={transacao.method === 'credit'}>
+                            <div class="flex items-center gap-2 p-3 rounded-xl bg-blue-900 border border-blue-800 peer-checked:bg-purple-600 peer-checked:border-purple-400 transition-all">
+                                <span class="text-lg">💳</span>
+                                <span class="text-sm font-bold">Crédito</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-blue-300 mb-1">Categoria</label>
+                        <select name="category" class="w-full bg-blue-900 border border-blue-800 text-white p-4 rounded-xl focus:outline-none focus:border-blue-500 appearance-none">
+                            <option value={transacao.category} selected hidden>{transacao.category}</option>
+                            <optgroup label="Saídas">
+                                <option value="Contas">📄 Contas Fixas</option>
+                                <option value="Alimentação">🍔 Alimentação</option>
+                                <option value="Transporte">🚗 Transporte</option>
+                                <option value="Lazer">🎉 Lazer</option>
+                                <option value="Outros">📦 Outros</option>
+                            </optgroup>
+                            <optgroup label="Entradas">
+                                <option value="Salário">💰 Salário</option>
+                                <option value="Freelance">⚡ Extra</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-blue-300 mb-1">Data</label>
+                        <input type="date" name="date" required value={transacao.date}
+                            class="w-full bg-blue-900 border border-blue-800 text-white p-4 rounded-xl focus:outline-none focus:border-blue-500">
+                    </div>
                 </div>
 
                 <button type="submit" class="w-full bg-blue-500 hover:bg-blue-400 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/30 mt-4 transition-transform active:scale-95">
