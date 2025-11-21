@@ -99,6 +99,30 @@ export async function getUserTransactions(userId, mes = null, ano = null) {
   }
 }
 
+// NOVA FUNÇÃO: Buscar UMA transação pelo ID (para edição)
+export async function getTransactionById(id) {
+    const doc = await getDoc();
+    const sheet = doc.sheetsByTitle['transactions'];
+    const rows = await sheet.getRows();
+    const row = rows.find(r => r.get('id') === id);
+    
+    if (!row) return null;
+
+    // Converte data DD/MM/YYYY para YYYY-MM-DD (para o input do HTML)
+    const [dia, mes, ano] = row.get('date').split('/');
+    const dataInput = `${ano}-${mes}-${dia}`;
+
+    return {
+        id: row.get('id'),
+        description: row.get('description'),
+        amount: row.get('amount'),
+        type: row.get('type'),
+        date: dataInput, // Formato input date
+        category: row.get('category'),
+        status: row.get('status')
+    };
+}
+
 export async function addTransaction(data) {
     const doc = await getDoc();
     const sheet = doc.sheetsByTitle['transactions'];
@@ -119,6 +143,32 @@ export async function addTransaction(data) {
         status: statusFinal,
         category: data.category || 'Geral'
     });
+}
+
+// NOVA FUNÇÃO: Salvar edição
+export async function updateTransaction(data) {
+    const doc = await getDoc();
+    const sheet = doc.sheetsByTitle['transactions'];
+    const rows = await sheet.getRows();
+    const row = rows.find(r => r.get('id') === data.id);
+
+    if (row) {
+        // Formata a data de volta para DD/MM/YYYY
+        if (data.date) {
+            const [ano, mes, dia] = data.date.split('-');
+            row.set('date', `${dia}/${mes}/${ano}`);
+        }
+        
+        row.set('description', data.description);
+        row.set('amount', data.amount);
+        row.set('type', data.type);
+        row.set('category', data.category);
+        
+        // Atualiza status se necessário
+        if (data.status) row.set('status', data.status);
+        
+        await row.save();
+    }
 }
 
 export async function deleteTransaction(id) {
@@ -160,9 +210,7 @@ export async function importTransactions(lista) {
 export async function getGoals(userId) {
     try {
         const doc = await getDoc();
-        if (!doc.sheetsByTitle['goals']) {
-             return [];
-        }
+        if (!doc.sheetsByTitle['goals']) return [];
         const sheet = doc.sheetsByTitle['goals'];
         const rows = await sheet.getRows();
         return rows
