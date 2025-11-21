@@ -27,8 +27,26 @@ const activeClass = (path) => currentPath === path ? "text-blue-400 scale-110 dr
             </footer>
         </div>
 
-        <nav class="fixed bottom-0 left-0 w-full bg-blue-950/90 backdrop-blur-md border-t border-blue-800/50 pb-safe z-50">
-            <div class="max-w-lg mx-auto px-4 h-20 flex justify-between items-center">
+        <div id="mobile-menu" class="fixed bottom-24 right-4 bg-blue-900/95 backdrop-blur-xl border border-blue-700/50 rounded-2xl shadow-2xl p-2 flex-col gap-1 w-48 transform transition-all duration-200 origin-bottom-right scale-0 opacity-0 z-50 hidden">
+            
+            <a href="/investimentos" class="flex items-center gap-3 p-3 rounded-xl hover:bg-blue-800/50 transition-colors text-blue-200 hover:text-white">
+                <span class="text-xl">📈</span>
+                <span class="font-medium text-sm">Investimentos</span>
+            </a>
+            
+            <a href="/metas" class="flex items-center gap-3 p-3 rounded-xl hover:bg-blue-800/50 transition-colors text-blue-200 hover:text-white">
+                <span class="text-xl">🏆</span>
+                <span class="font-medium text-sm">Metas</span>
+            </a>
+
+            <a href="/importar" class="flex items-center gap-3 p-3 rounded-xl hover:bg-blue-800/50 transition-colors text-blue-200 hover:text-white">
+                <span class="text-xl">📤</span>
+                <span class="font-medium text-sm">Importar CSV</span>
+            </a>
+        </div>
+
+        <nav class="fixed bottom-0 left-0 w-full bg-blue-950/90 backdrop-blur-md border-t border-blue-800/50 pb-safe z-40">
+            <div class="max-w-lg mx-auto px-6 h-20 flex justify-between items-center">
                 
                 <a href="/dashboard" class={`flex flex-col items-center gap-1 transition-all duration-300 ${activeClass('/dashboard')}`}>
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
@@ -46,10 +64,12 @@ const activeClass = (path) => currentPath === path ? "text-blue-400 scale-110 dr
                     </a>
                 </div>
 
-                <a href="/investimentos" class={`flex flex-col items-center gap-1 transition-all duration-300 ${activeClass('/investimentos')}`}>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                    <span class="text-[10px] font-medium">Investir</span>
-                </a>
+                <button id="menu-btn" class="flex flex-col items-center gap-1 transition-all duration-300 text-blue-400/40 hover:text-blue-300 focus:outline-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                    <span class="text-[10px] font-medium">Menu</span>
+                </button>
 
                 <a href="/logout" class="flex flex-col items-center gap-1 transition-all duration-300 text-blue-400/40 hover:text-red-400">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
@@ -58,5 +78,37 @@ const activeClass = (path) => currentPath === path ? "text-blue-400 scale-110 dr
 
             </div>
         </nav>
+
+        <script is:inline>
+            const btn = document.getElementById('menu-btn');
+            const menu = document.getElementById('mobile-menu');
+            let isOpen = false;
+
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                isOpen = !isOpen;
+                if (isOpen) {
+                    menu.classList.remove('hidden');
+                    setTimeout(() => {
+                        menu.classList.remove('scale-0', 'opacity-0');
+                        menu.classList.add('scale-100', 'opacity-100');
+                    }, 10); // Pequeno delay para a animação funcionar
+                } else {
+                    menu.classList.remove('scale-100', 'opacity-100');
+                    menu.classList.add('scale-0', 'opacity-0');
+                    setTimeout(() => menu.classList.add('hidden'), 200);
+                }
+            });
+
+            // Fecha ao clicar fora
+            document.addEventListener('click', (e) => {
+                if (isOpen && !menu.contains(e.target) && !btn.contains(e.target)) {
+                    isOpen = false;
+                    menu.classList.remove('scale-100', 'opacity-100');
+                    menu.classList.add('scale-0', 'opacity-0');
+                    setTimeout(() => menu.classList.add('hidden'), 200);
+                }
+            });
+        </script>
 	</body>
 </html>
