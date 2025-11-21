@@ -3,20 +3,23 @@ export const prerender = false;
 import Layout from '../layouts/Layout.astro';
 import { getUserTransactions } from '../lib/sheets';
 
+// 1. SEGURANÇA
 if (!Astro.cookies.has('user_session')) return Astro.redirect('/login');
 const userId = Astro.cookies.get('user_session')?.value;
 
-// DATA ATUAL (DA URL)
+// 2. CONTROLE DE DATA
 const urlParams = Astro.url.searchParams;
 const hoje = new Date();
 const mesAtual = parseInt(urlParams.get('mes')) || (hoje.getMonth() + 1);
 const anoAtual = parseInt(urlParams.get('ano')) || hoje.getFullYear();
 
-// URL DE RETORNO (Para botões de ação)
+// Parâmetros para voltar para o mesmo mês depois de pagar/deletar
 const paramsUrl = `?mes=${mesAtual}&ano=${anoAtual}`;
 
-// DADOS
+// 3. BUSCA DADOS
 const transactions = await getUserTransactions(userId, mesAtual, anoAtual);
+
+// 4. CÁLCULOS
 const pendentes = transactions.filter(t => t.status === 'pendente').reverse();
 const historico = transactions.filter(t => t.status !== 'pendente');
 
@@ -27,7 +30,7 @@ const porcentagemGasta = totalEntradas > 0 ? Math.min((totalSaidas / totalEntrad
 
 const money = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
-// NAVEGAÇÃO
+// Navegação
 const dataDisplay = new Date(anoAtual, mesAtual - 1, 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
 const prevDate = new Date(anoAtual, mesAtual - 2, 1);
 const nextDate = new Date(anoAtual, mesAtual, 1);
@@ -106,7 +109,10 @@ const linkNext = `/dashboard?mes=${nextDate.getMonth() + 1}&ano=${nextDate.getFu
                         <div class="bg-blue-900/60 border border-yellow-500/30 p-4 rounded-2xl flex justify-between items-center relative overflow-hidden group">
                             <div class="absolute left-0 top-0 bottom-0 w-1 bg-yellow-500"></div>
                             <div class="pl-3">
-                                <p class="font-bold text-white text-sm">{t.description}</p>
+                                <div class="flex items-center gap-2">
+                                    <p class="font-bold text-white text-sm">{t.description}</p>
+                                    {t.method === 'credit' && <span class="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded border border-purple-500/30">💳</span>}
+                                </div>
                                 <p class="text-xs text-yellow-200 font-medium">Vence dia {t.date.split('/')[0]}</p>
                             </div>
                             <div class="flex items-center gap-2">
@@ -153,7 +159,10 @@ const linkNext = `/dashboard?mes=${nextDate.getMonth() + 1}&ano=${nextDate.getFu
                                     {t.type === 'entrada' ? '↑' : '↓'}
                                 </div>
                                 <div>
-                                    <p class="font-bold text-white text-sm">{t.description}</p>
+                                    <div class="flex items-center gap-2">
+                                        <p class="font-bold text-white text-sm">{t.description}</p>
+                                        {t.method === 'credit' && <span class="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded border border-purple-500/30">💳</span>}
+                                    </div>
                                     <div class="flex items-center gap-2 text-xs text-blue-400/70">
                                         <span>{t.date}</span>
                                         <span class="capitalize">• {t.status}</span>
