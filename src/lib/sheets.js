@@ -81,7 +81,8 @@ export async function getUserTransactions(userId, mes = null, ano = null) {
             year: parseInt(year),
             dateObj: new Date(`${year}-${month}-${day}`),
             status: row.get('status'),
-            category: row.get('category') || 'Geral'
+            category: row.get('category') || 'Geral',
+            method: row.get('method') || 'pix' // LÊ O MÉTODO AQUI
         };
     });
 
@@ -99,7 +100,7 @@ export async function getUserTransactions(userId, mes = null, ano = null) {
   }
 }
 
-// NOVA FUNÇÃO: Buscar UMA transação pelo ID (para edição)
+// Buscar UMA transação pelo ID (para edição)
 export async function getTransactionById(id) {
     const doc = await getDoc();
     const sheet = doc.sheetsByTitle['transactions'];
@@ -108,18 +109,17 @@ export async function getTransactionById(id) {
     
     if (!row) return null;
 
-    // Converte data DD/MM/YYYY para YYYY-MM-DD (para o input do HTML)
     const [dia, mes, ano] = row.get('date').split('/');
-    const dataInput = `${ano}-${mes}-${dia}`;
-
+    
     return {
         id: row.get('id'),
         description: row.get('description'),
         amount: row.get('amount'),
         type: row.get('type'),
-        date: dataInput, // Formato input date
+        date: `${ano}-${mes}-${dia}`, // Formato input date YYYY-MM-DD
         category: row.get('category'),
-        status: row.get('status')
+        status: row.get('status'),
+        method: row.get('method') || 'pix'
     };
 }
 
@@ -141,11 +141,11 @@ export async function addTransaction(data) {
         description: data.description,
         date: dataFormatada,
         status: statusFinal,
-        category: data.category || 'Geral'
+        category: data.category || 'Geral',
+        method: data.method || 'pix' // SALVA O MÉTODO AQUI
     });
 }
 
-// NOVA FUNÇÃO: Salvar edição
 export async function updateTransaction(data) {
     const doc = await getDoc();
     const sheet = doc.sheetsByTitle['transactions'];
@@ -153,20 +153,17 @@ export async function updateTransaction(data) {
     const row = rows.find(r => r.get('id') === data.id);
 
     if (row) {
-        // Formata a data de volta para DD/MM/YYYY
         if (data.date) {
             const [ano, mes, dia] = data.date.split('-');
             row.set('date', `${dia}/${mes}/${ano}`);
         }
-        
         row.set('description', data.description);
         row.set('amount', data.amount);
         row.set('type', data.type);
         row.set('category', data.category);
+        row.set('method', data.method); // ATUALIZA O MÉTODO AQUI
         
-        // Atualiza status se necessário
         if (data.status) row.set('status', data.status);
-        
         await row.save();
     }
 }
@@ -201,7 +198,8 @@ export async function importTransactions(lista) {
         description: t.description,
         date: t.date,
         status: 'pago',
-        category: t.category
+        category: t.category,
+        method: t.method || 'pix'
     }));
     await sheet.addRows(rows);
 }
