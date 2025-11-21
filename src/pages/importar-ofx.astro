@@ -2,8 +2,7 @@
 export const prerender = false;
 import Layout from '../layouts/Layout.astro';
 import { importTransactions } from '../lib/sheets';
-// Importação segura da biblioteca que você acabou de adicionar no package.json
-import OfxParser from 'node-ofx-parser'; 
+import { parse } from 'node-ofx-parser';
 
 if (!Astro.cookies.has('user_session')) return Astro.redirect('/login');
 
@@ -20,31 +19,22 @@ if (Astro.request.method === 'POST') {
             erro = "Por favor, selecione um arquivo OFX.";
         } else {
             const text = await file.text();
+            const data = parse(text);
             
-            // Usa a biblioteca para ler o texto do arquivo
-            const data = OfxParser.parse(text);
-            
-            // Tenta achar transações em Conta Corrente ou Cartão
             const bankMsgs = data.OFX.BANKMSGSRSV1?.STMTTRNRS?.STMTRS?.BANKTRANLIST?.STMTTRN;
             const creditMsgs = data.OFX.CREDITCARDMSGSRSV1?.CCSTMTTRNRS?.CCSTMTRS?.BANKTRANLIST?.STMTTRN;
             
             let listaBruta = [];
-            
-            if (bankMsgs) {
-                listaBruta = Array.isArray(bankMsgs) ? bankMsgs : [bankMsgs];
-            } else if (creditMsgs) {
-                listaBruta = Array.isArray(creditMsgs) ? creditMsgs : [creditMsgs];
-            }
+            if (bankMsgs) listaBruta = Array.isArray(bankMsgs) ? bankMsgs : [bankMsgs];
+            else if (creditMsgs) listaBruta = Array.isArray(creditMsgs) ? creditMsgs : [creditMsgs];
 
             if (listaBruta.length === 0) {
-                erro = "Nenhuma transação encontrada neste arquivo OFX.";
+                erro = "Nenhuma transação válida encontrada neste arquivo.";
             } else {
                 const transacoesFormatadas = listaBruta.map(t => {
-                    // Formata data YYYYMMDD para DD/MM/YYYY
                     const ano = t.DTPOSTED.substring(0, 4);
                     const mes = t.DTPOSTED.substring(4, 6);
                     const dia = t.DTPOSTED.substring(6, 8);
-                    
                     const valor = parseFloat(t.TRNAMT);
 
                     return {
@@ -59,54 +49,108 @@ if (Astro.request.method === 'POST') {
                 });
 
                 await importTransactions(transacoesFormatadas);
-                sucesso = `${transacoesFormatadas.length} transações importadas com sucesso!`;
+                sucesso = `${transacoesFormatadas.length} lançamentos importados!`;
             }
         }
     } catch (e) {
         console.error(e);
-        erro = "Erro ao processar o arquivo. Verifique se é um OFX válido.";
+        erro = "Erro ao ler o arquivo. Verifique se é um extrato OFX válido.";
     }
 }
 ---
 
 <Layout>
-    <div class="min-h-screen bg-blue-950 text-blue-50">
-        <div class="p-6 bg-blue-900/20 border-b border-blue-800/30 flex items-center gap-4">
-            <a href="/dashboard" class="p-2 bg-blue-900 rounded-lg text-blue-400 hover:bg-blue-800">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-            </a>
-            <h1 class="text-xl font-bold">Importar Extrato (OFX)</h1>
+    <div class="p-6 bg-blue-900/20 border-b border-blue-800/30 flex items-center gap-4">
+        <a href="/dashboard" class="p-2 bg-blue-900 rounded-lg text-blue-400 hover:bg-blue-800 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+        </a>
+        <h1 class="text-xl font-bold text-blue-50">Importação Inteligente</h1>
+    </div>
+
+    <main class="max-w-3xl mx-auto px-4 py-8 space-y-8 pb-32">
+
+        {erro && <div class="bg-red-500/20 text-red-200 p-4 rounded-xl border border-red-500/50 text-center font-medium">{erro}</div>}
+        {sucesso && <div class="bg-green-500/20 text-green-200 p-4 rounded-xl border border-green-500/50 text-center font-bold flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>{sucesso}</div>}
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-blue-900/30 p-5 rounded-2xl border border-blue-800/50 hover:bg-blue-800/30 transition-colors">
+                <div class="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center text-blue-400 mb-3 text-xl">⚡</div>
+                <h3 class="font-bold text-blue-100 mb-1">Zero Erros</h3>
+                <p class="text-xs text-blue-300 leading-relaxed">Esqueça erros de digitação. O valor e a data vêm exatos do banco.</p>
+            </div>
+            <div class="bg-blue-900/30 p-5 rounded-2xl border border-blue-800/50 hover:bg-blue-800/30 transition-colors">
+                <div class="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center text-green-400 mb-3 text-xl">🔒</div>
+                <h3 class="font-bold text-blue-100 mb-1">100% Seguro</h3>
+                <p class="text-xs text-blue-300 leading-relaxed">Não pedimos sua senha bancária. Você baixa o arquivo e traz pra cá.</p>
+            </div>
+            <div class="bg-blue-900/30 p-5 rounded-2xl border border-blue-800/50 hover:bg-blue-800/30 transition-colors">
+                <div class="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center text-purple-400 mb-3 text-xl">🚀</div>
+                <h3 class="font-bold text-blue-100 mb-1">Agilidade</h3>
+                <p class="text-xs text-blue-300 leading-relaxed">Importe 100 lançamentos em 2 segundos. Ganhe tempo de vida.</p>
+            </div>
         </div>
 
-        <main class="max-w-2xl mx-auto px-4 py-8 space-y-8">
-            {erro && <div class="bg-red-500/20 text-red-200 p-4 rounded-xl border border-red-500/50 text-center">{erro}</div>}
-            {sucesso && <div class="bg-green-500/20 text-green-200 p-4 rounded-xl border border-green-500/50 text-center font-bold">{sucesso}</div>}
-
-            <div class="space-y-3">
-                <h2 class="text-blue-300 text-xs uppercase font-bold px-1 mb-2">Ajuda Rápida</h2>
-                <div class="bg-blue-900/20 border border-blue-800/30 p-4 rounded-xl text-sm text-blue-200/80">
-                    <p class="mb-2"><strong>O que é OFX?</strong> É o formato de extrato digital que todo banco (Nubank, Inter, Itaú) oferece.</p>
-                    <p>Vá no site do seu banco > Extrato > Exportar/Salvar como > <strong>OFX</strong>.</p>
-                </div>
-            </div>
-
-            <div class="bg-gradient-to-br from-blue-600/10 to-purple-600/10 p-8 rounded-3xl border-2 border-dashed border-blue-500/30 text-center hover:border-blue-500/60 transition-colors mt-4">
-                <form method="POST" enctype="multipart/form-data" class="space-y-6">
-                    <div class="space-y-2">
-                        <div class="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <span class="text-3xl">🏦</span>
-                        </div>
-                        <label class="block cursor-pointer">
-                            <span class="sr-only">Escolher arquivo OFX</span>
-                            <input type="file" name="ofx_file" accept=".ofx" required class="block w-full text-sm text-blue-300 file:mr-4 file:py-2.5 file:px-6 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-blue-500 file:text-white file:hover:bg-blue-400 file:transition-colors cursor-pointer"/>
-                        </label>
-                        <p class="text-xs text-blue-400/60 pt-2">Selecione o arquivo .ofx do seu banco</p>
+        <div class="bg-gradient-to-br from-blue-600/10 to-blue-900/20 p-8 rounded-3xl border-2 border-dashed border-blue-500/30 text-center hover:border-blue-500/60 transition-all group">
+            <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                <div class="space-y-3">
+                    <div class="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
                     </div>
-                    <button type="submit" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-600/20 transition-transform active:scale-95">
-                        Processar Arquivo
-                    </button>
-                </form>
+                    
+                    <label class="block cursor-pointer">
+                        <span class="sr-only">Escolher arquivo OFX</span>
+                        <input type="file" name="ofx_file" accept=".ofx" required
+                            class="block w-full text-sm text-blue-300
+                            file:mr-4 file:py-3 file:px-6
+                            file:rounded-xl file:border-0
+                            file:text-sm file:font-bold
+                            file:bg-blue-600 file:text-white
+                            file:hover:bg-blue-500 file:transition-colors
+                            cursor-pointer text-center mx-auto
+                        "/>
+                    </label>
+                    <p class="text-xs text-blue-400/60 pt-2">Extrato Bancário (.ofx)</p>
+                </div>
+
+                <button type="submit" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-600/20 transition-all active:scale-[0.98] mt-4">
+                    Processar Arquivo
+                </button>
+            </form>
+        </div>
+
+        <div class="space-y-4">
+            <h2 class="text-blue-200 text-sm font-bold uppercase tracking-wider px-1">Como conseguir o arquivo?</h2>
+            
+            <div class="bg-blue-900/20 rounded-2xl p-1">
+                <details class="group">
+                    <summary class="flex items-center justify-between p-4 cursor-pointer hover:bg-blue-900/40 rounded-xl transition-colors font-medium text-blue-100">
+                        <div class="flex items-center gap-3">
+                            <span class="w-8 h-8 bg-purple-700 rounded-lg flex items-center justify-center text-white font-bold text-xs">NU</span>
+                            <span>Nubank</span>
+                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 transition-transform group-open:rotate-180 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                    </summary>
+                    <div class="p-4 pt-0 pl-14 text-sm text-blue-300 leading-relaxed border-l-2 border-blue-800/50 ml-8 mb-4">
+                        Acesse pelo Site (Computador) > Clique no seu nome > Extrato > Escolha o mês > Clique em "Exportar" > Escolha <strong>OFX</strong>.
+                    </div>
+                </details>
+
+                <details class="group">
+                    <summary class="flex items-center justify-between p-4 cursor-pointer hover:bg-blue-900/40 rounded-xl transition-colors font-medium text-blue-100">
+                        <div class="flex items-center gap-3">
+                            <span class="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center text-white font-bold text-xs">IT</span>
+                            <span>Itaú / Inter / Bradesco</span>
+                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 transition-transform group-open:rotate-180 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                    </summary>
+                    <div class="p-4 pt-0 pl-14 text-sm text-blue-300 leading-relaxed border-l-2 border-blue-800/50 ml-8 mb-4">
+                        Geralmente disponível no Internet Banking pelo computador. Procure por "Salvar em Outros Formatos", "Money 2000" ou "Gerenciadores Financeiros".
+                    </div>
+                </details>
             </div>
-        </main>
-    </div>
+        </div>
+
+    </main>
 </Layout>
