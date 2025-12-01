@@ -20,6 +20,10 @@ const totalSaidas = transactions.filter(t => t.type === 'saida').reduce((acc, t)
 const saldoPrevisto = totalEntradas - totalSaidas;
 const porcentagemGasta = totalEntradas > 0 ? Math.min((totalSaidas / totalEntradas) * 100, 100) : (totalSaidas > 0 ? 100 : 0);
 
+// --- LÓGICA DO ALERTA ---
+// Verifica se as saídas são maiores que as entradas (e se tem alguma entrada lançada)
+const estourouOrcamento = totalSaidas > totalEntradas && totalEntradas > 0;
+
 const money = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
 const gastosPorCat = {};
@@ -60,8 +64,23 @@ const linkNext = `/dashboard?mes=${nextDate.getMonth() + 1}&ano=${nextDate.getFu
 
     <main class="max-w-3xl mx-auto px-4 space-y-6 mt-4 pb-24">
         
+        {estourouOrcamento && (
+            <div class="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded-r-xl shadow-sm flex items-start gap-4 animate-pulse">
+                <div class="text-3xl">🚨</div>
+                <div>
+                    <p class="font-bold text-red-800 dark:text-red-200">Cuidado!</p>
+                    <p class="text-sm text-red-700 dark:text-red-300 mt-1">
+                        Oiee! Suas contas estão maiores que seu salário, saca?
+                    </p>
+                    <p class="text-xs text-red-600/70 dark:text-red-400 mt-2 font-mono">
+                        Faltam {money(Math.abs(saldoPrevisto))} para fechar a conta.
+                    </p>
+                </div>
+            </div>
+        )}
+
         {totalEntradas === 0 && (
-            <div class="bg-orange-100 dark:bg-orange-500/20 border border-orange-200 dark:border-orange-500/50 p-4 rounded-2xl flex items-center justify-between animate-pulse">
+            <div class="bg-orange-100 dark:bg-orange-500/20 border border-orange-200 dark:border-orange-500/50 p-4 rounded-2xl flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     <span class="text-2xl">💸</span>
                     <div>
