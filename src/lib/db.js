@@ -48,3 +48,10 @@ export async function createUser(dados) {
   if (error) throw new Error(error.message);
   return data[0];
 }
+
+// --- FUNÇÃO EXTRA PARA MIGRAÇÃO (db.js) ---
+export async function migrarDados(tabela, dados) {
+  // A opção upsert: true atualiza se já existir ou cria se não existir
+  const { error } = await supabase.from(tabela).upsert(dados);
+  if (error) console.error(`Erro ao migrar ${tabela}:`, error);
+}
