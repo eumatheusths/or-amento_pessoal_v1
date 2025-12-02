@@ -1,0 +1,5 @@
+---
+// Destrói a sessão
+Astro.cookies.delete('user_session', { path: '/' });
+return Astro.redirect('/login');
+---

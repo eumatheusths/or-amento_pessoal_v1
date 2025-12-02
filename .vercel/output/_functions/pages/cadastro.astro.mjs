@@ -1,0 +1,69 @@
+/* empty css                                     */
+import { e as createComponent, f as createAstro, r as renderTemplate, l as renderHead } from '../chunks/astro/server_DmKDn6jN.mjs';
+import 'piccolore';
+import 'clsx';
+import { c as createUser } from '../chunks/db_DKZoXnuO.mjs';
+import { e as enviarBoasVindas } from '../chunks/email_C_wyqi8m.mjs';
+export { renderers } from '../renderers.mjs';
+
+var __freeze = Object.freeze;
+var __defProp = Object.defineProperty;
+var __template = (cooked, raw) => __freeze(__defProp(cooked, "raw", { value: __freeze(cooked.slice()) }));
+var _a;
+const $$Astro = createAstro();
+const prerender = false;
+const $$Cadastro = createComponent(async ($$result, $$props, $$slots) => {
+  const Astro2 = $$result.createAstro($$Astro, $$props, $$slots);
+  Astro2.self = $$Cadastro;
+  let erro = "";
+  let sucesso = false;
+  if (Astro2.request.method === "POST") {
+    try {
+      const data = await Astro2.request.formData();
+      const name = data.get("name")?.toString();
+      const email = data.get("email")?.toString();
+      const password = data.get("password")?.toString();
+      const salary = data.get("salary")?.toString();
+      if (!name || !email || !password) {
+        erro = "Preencha os campos obrigat\xF3rios.";
+      } else {
+        await createUser({ name, email, password, salary });
+        try {
+          await enviarBoasVindas(email, name, password);
+        } catch (emailError) {
+          console.error("Erro ao enviar boas vindas:", emailError);
+        }
+        sucesso = true;
+      }
+    } catch (e) {
+      console.error(e);
+      erro = e.message || "Erro ao criar conta. Tente novamente.";
+    }
+  }
+  if (sucesso) {
+    return Astro2.redirect("/login?cadastrado=true");
+  }
+  return renderTemplate(_a || (_a = __template([`<html lang="pt-br" class="dark"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Criar Conta - Finance Storm</title><script>
+        // Mant\xE9m o tema salvo
+        if (localStorage.getItem('theme') === 'light') {
+            document.documentElement.classList.remove('dark');
+        } else {
+            document.documentElement.classList.add('dark');
+        }
+    <\/script>`, '</head> <body class="bg-slate-50 dark:bg-blue-950 text-slate-900 dark:text-white min-h-screen flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-300"> <div class="absolute top-0 left-0 w-full h-full overflow-hidden -z-10"> <div class="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-600/30 rounded-full blur-[100px]"></div> <div class="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[100px]"></div> </div> <div class="w-full max-w-md bg-white/80 dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-8 rounded-3xl shadow-2xl"> <div class="text-center mb-8"> <div class="w-12 h-12 bg-blue-600 dark:bg-blue-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/40"> <span class="text-2xl">\u{1F680}</span> </div> <h1 class="text-2xl font-bold text-slate-800 dark:text-white">Crie sua conta</h1> <p class="text-slate-500 dark:text-blue-200/60 text-sm mt-1">Comece a organizar sua vida financeira hoje.</p> </div> ', ' <form method="POST" class="space-y-4"> <div> <label class="block text-xs text-slate-500 dark:text-blue-200 mb-1 ml-1">Nome Completo</label> <input type="text" name="name" required placeholder="Seu nome" class="w-full bg-white dark:bg-slate-950/50 border border-slate-300 dark:border-white/10 rounded-xl p-3 text-slate-800 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"> </div> <div> <label class="block text-xs text-slate-500 dark:text-blue-200 mb-1 ml-1">Email</label> <input type="email" name="email" required placeholder="seu@email.com" class="w-full bg-white dark:bg-slate-950/50 border border-slate-300 dark:border-white/10 rounded-xl p-3 text-slate-800 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"> </div> <div> <label class="block text-xs text-slate-500 dark:text-blue-200 mb-1 ml-1">Sal\xE1rio Base (Opcional)</label> <input type="number" step="0.01" name="salary" placeholder="0.00" class="w-full bg-white dark:bg-slate-950/50 border border-slate-300 dark:border-white/10 rounded-xl p-3 text-slate-800 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"> </div> <div> <label class="block text-xs text-slate-500 dark:text-blue-200 mb-1 ml-1">Senha</label> <input type="password" name="password" required placeholder="******" class="w-full bg-white dark:bg-slate-950/50 border border-slate-300 dark:border-white/10 rounded-xl p-3 text-slate-800 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"> </div> <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95 mt-4">\nCadastrar Gratuitamente\n</button> </form> <div class="mt-6 text-center border-t border-slate-200 dark:border-white/5 pt-6"> <p class="text-sm text-slate-500 dark:text-gray-400">J\xE1 tem uma conta?</p> <a href="/login" class="text-blue-600 dark:text-blue-400 font-bold hover:underline text-sm">Fazer Login</a> </div> </div> </body></html>'])), renderHead(), erro && renderTemplate`<div class="bg-red-100 dark:bg-red-500/20 border border-red-200 dark:border-red-500/50 text-red-600 dark:text-red-200 p-3 rounded-xl text-sm mb-6 text-center"> ${erro} </div>`);
+}, "C:/Users/Matheus/or-amento_pessoal_v1/src/pages/cadastro.astro", void 0);
+
+const $$file = "C:/Users/Matheus/or-amento_pessoal_v1/src/pages/cadastro.astro";
+const $$url = "/cadastro";
+
+const _page = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+    __proto__: null,
+    default: $$Cadastro,
+    file: $$file,
+    prerender,
+    url: $$url
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const page = () => _page;
+
+export { page };

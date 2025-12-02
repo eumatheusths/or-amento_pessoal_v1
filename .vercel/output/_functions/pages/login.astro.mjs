@@ -1,0 +1,67 @@
+/* empty css                                     */
+import { e as createComponent, f as createAstro, l as renderHead, r as renderTemplate } from '../chunks/astro/server_DmKDn6jN.mjs';
+import 'piccolore';
+import 'clsx';
+import { k as findUserByEmail } from '../chunks/db_DKZoXnuO.mjs';
+export { renderers } from '../renderers.mjs';
+
+const $$Astro = createAstro();
+const prerender = false;
+const $$Login = createComponent(async ($$result, $$props, $$slots) => {
+  const Astro2 = $$result.createAstro($$Astro, $$props, $$slots);
+  Astro2.self = $$Login;
+  let erro = "";
+  let msgSucesso = "";
+  const urlParams = Astro2.url.searchParams;
+  if (urlParams.get("cadastrado") === "true") {
+    msgSucesso = "Conta criada! Enviamos os dados para seu e-mail.";
+  }
+  if (Astro2.request.method === "POST") {
+    try {
+      const data = await Astro2.request.formData();
+      const email = data.get("email")?.toString();
+      const senha = data.get("senha")?.toString();
+      if (!email || !senha) {
+        erro = "Preencha todos os campos.";
+      } else {
+        const user = await findUserByEmail(email);
+        if (!user) {
+          erro = "Usu\xE1rio n\xE3o encontrado. Crie uma conta.";
+        } else if (user.password !== senha) {
+          erro = "Senha incorreta.";
+        } else {
+          Astro2.cookies.set("user_session", user.id, {
+            path: "/",
+            httpOnly: true,
+            secure: false,
+            maxAge: 60 * 60 * 24 * 30
+          });
+          return Astro2.redirect("/dashboard");
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      erro = "Erro interno. Tente novamente.";
+    }
+  }
+  return renderTemplate`<html lang="pt-br"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Login - Finance Storm</title>${renderHead()}</head> <body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4 relative overflow-hidden"> <div class="absolute top-0 left-0 w-full h-full overflow-hidden -z-10"> <div class="absolute top-[20%] right-[20%] w-[400px] h-[400px] bg-blue-500/20 rounded-full blur-[120px]"></div> <div class="absolute bottom-[10%] left-[10%] w-[300px] h-[300px] bg-emerald-500/10 rounded-full blur-[100px]"></div> </div> <div class="w-full max-w-sm bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl"> <div class="text-center mb-8"> <div class="inline-block p-3 bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl mb-4 shadow-lg"> <span class="text-3xl">⚡</span> </div> <h1 class="text-2xl font-bold tracking-tight">Finance Storm</h1> <p class="text-blue-200/60 text-sm mt-1">Acesse seu painel financeiro.</p> </div> ${msgSucesso && renderTemplate`<div class="bg-green-500/20 border border-green-500/50 text-green-200 p-3 rounded-xl text-sm mb-6 text-center animate-pulse">${msgSucesso}</div>`} ${erro && renderTemplate`<div class="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl text-sm mb-6 text-center">${erro}</div>`} <form method="POST" enctype="application/x-www-form-urlencoded" class="space-y-5"> <div class="group"> <label class="block text-xs text-blue-200 mb-1 ml-1 group-focus-within:text-blue-400 transition-colors">Email</label> <div class="relative"> <input type="email" name="email" required placeholder="seu@email.com" class="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 pl-10 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"> <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute left-3 top-3.5 text-gray-500 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"></path></svg> </div> </div> <div class="group"> <div class="flex justify-between items-center mb-1 ml-1"> <label class="block text-xs text-blue-200 group-focus-within:text-blue-400 transition-colors">Senha</label> <a href="/recuperar" class="text-[10px] text-blue-400 hover:text-white transition-colors">Esqueceu a senha?</a> </div> <div class="relative"> <input type="password" name="senha" required placeholder="******" class="w-full bg-slate-950/50 border border-white/10 rounded-xl p-3 pl-10 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"> <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute left-3 top-3.5 text-gray-500 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg> </div> </div> <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-600/20 transition-transform active:scale-[0.98]">
+Entrar
+</button> </form> <div class="mt-8 text-center"> <p class="text-sm text-gray-400 mb-2">Ainda não tem conta?</p> <a href="/cadastro" class="inline-block w-full border border-white/10 hover:bg-white/5 text-white font-medium py-2 rounded-xl transition-colors text-sm">
+Criar conta agora
+</a> </div> </div> </body></html>`;
+}, "C:/Users/Matheus/or-amento_pessoal_v1/src/pages/login.astro", void 0);
+
+const $$file = "C:/Users/Matheus/or-amento_pessoal_v1/src/pages/login.astro";
+const $$url = "/login";
+
+const _page = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: $$Login,
+  file: $$file,
+  prerender,
+  url: $$url
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const page = () => _page;
+
+export { page };

@@ -1,0 +1,57 @@
+/* empty css                                     */
+import { e as createComponent, f as createAstro, k as renderComponent, r as renderTemplate, m as maybeRenderHead, h as addAttribute } from '../chunks/astro/server_DmKDn6jN.mjs';
+import 'piccolore';
+import { $ as $$Layout } from '../chunks/Layout_eX9uxKGE.mjs';
+import { l as addGoal, m as updateGoalBalance, n as deleteGoal, o as getGoals } from '../chunks/db_DKZoXnuO.mjs';
+export { renderers } from '../renderers.mjs';
+
+const $$Astro = createAstro();
+const prerender = false;
+const $$Metas = createComponent(async ($$result, $$props, $$slots) => {
+  const Astro2 = $$result.createAstro($$Astro, $$props, $$slots);
+  Astro2.self = $$Metas;
+  if (!Astro2.cookies.has("user_session")) return Astro2.redirect("/login");
+  const userId = Astro2.cookies.get("user_session")?.value;
+  if (Astro2.request.method === "POST") {
+    const data = await Astro2.request.formData();
+    const action = data.get("action");
+    if (action === "create") {
+      await addGoal({
+        user_id: userId,
+        title: data.get("title"),
+        target_amount: parseFloat(data.get("target_amount")),
+        current_amount: parseFloat(data.get("initial_amount") || 0),
+        icon: data.get("icon"),
+        color: data.get("color")
+      });
+    } else if (action === "deposit") {
+      await updateGoalBalance(data.get("id"), data.get("amount"));
+    } else if (action === "delete") {
+      await deleteGoal(data.get("id"));
+    }
+  }
+  const metas = await getGoals(userId);
+  const money = (val) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val);
+  return renderTemplate`${renderComponent($$result, "Layout", $$Layout, {}, { "default": async ($$result2) => renderTemplate` ${maybeRenderHead()}<div class="p-6 flex items-center gap-4 bg-blue-900/20 border-b border-blue-800/30"> <h1 class="text-xl font-bold text-blue-50 flex items-center gap-2"> <span class="text-2xl">🏆</span> Meus Objetivos
+</h1> </div> <main class="max-w-3xl mx-auto px-4 py-6 space-y-6"> <div class="space-y-4"> ${metas.length === 0 && renderTemplate`<div class="text-center p-8 bg-blue-900/20 rounded-2xl border border-dashed border-blue-700"> <p class="text-blue-300">Você ainda não tem metas.</p> <p class="text-sm text-blue-400">Crie uma abaixo para começar a poupar!</p> </div>`} ${metas.map((meta) => {
+    const porcentagem = Math.min(meta.current_amount / meta.target_amount * 100, 100);
+    return renderTemplate`<div${addAttribute(`p-5 rounded-2xl border ${meta.color.replace("bg-", "border-").replace("500", "500/30")} bg-blue-900/40 relative overflow-hidden group`, "class")}> <div class="flex justify-between items-start mb-4 relative z-10"> <div class="flex items-center gap-3"> <div class="w-12 h-12 bg-blue-950/50 rounded-xl flex items-center justify-center text-2xl border border-white/5"> ${meta.icon} </div> <div> <h2 class="font-bold text-white">${meta.title}</h2> <p class="text-xs text-blue-200">Meta: ${money(meta.target_amount)}</p> </div> </div> <div class="text-right"> <span class="text-lg font-bold text-white">${money(meta.current_amount)}</span> <p class="text-xs text-blue-300">${porcentagem.toFixed(0)}%</p> </div> </div> <div class="h-3 w-full bg-blue-950/50 rounded-full overflow-hidden relative z-10 border border-white/5 mb-4"> <div${addAttribute(`h-full rounded-full transition-all duration-1000 ${meta.color}`, "class")}${addAttribute(`width: ${porcentagem}%`, "style")}></div> </div> <div class="flex gap-2 relative z-10"> <form method="POST" class="flex-1 flex gap-2"> <input type="hidden" name="action" value="deposit"> <input type="hidden" name="id"${addAttribute(meta.id, "value")}> <input type="number" name="amount" placeholder="R$ valor" required class="w-full bg-blue-950 border border-blue-800 rounded-lg px-3 py-2 text-sm text-white focus:border-green-500 outline-none"> <button class="bg-green-600 text-white px-3 py-2 rounded-lg font-bold hover:bg-green-500 text-sm">+</button> </form> <form method="POST" onsubmit="return confirm('Apagar meta?')"> <input type="hidden" name="action" value="delete"> <input type="hidden" name="id"${addAttribute(meta.id, "value")}> <button class="bg-red-500/20 text-red-400 px-3 py-2 rounded-lg hover:bg-red-500 hover:text-white transition-colors">🗑️</button> </form> </div> <div${addAttribute(`absolute -right-10 -bottom-10 w-32 h-32 rounded-full blur-3xl opacity-10 ${meta.color}`, "class")}></div> </div>`;
+  })} </div> <div class="bg-blue-900/20 border border-blue-800/50 p-6 rounded-2xl mt-8"> <h3 class="font-bold text-white mb-4 flex items-center gap-2">✨ Criar Nova Meta</h3> <form method="POST" class="space-y-4"> <input type="hidden" name="action" value="create"> <div> <label class="text-xs text-blue-300">Nome da Meta</label> <input type="text" name="title" required placeholder="Ex: Viagem, Carro..." class="w-full bg-blue-950 border border-blue-800 rounded-xl p-3 text-white focus:border-blue-500 outline-none"> </div> <div class="grid grid-cols-2 gap-4"> <div> <label class="text-xs text-blue-300">Valor Alvo (R$)</label> <input type="number" step="0.01" name="target_amount" required placeholder="10000" class="w-full bg-blue-950 border border-blue-800 rounded-xl p-3 text-white focus:border-blue-500 outline-none"> </div> <div> <label class="text-xs text-blue-300">Já tenho (R$)</label> <input type="number" step="0.01" name="initial_amount" placeholder="0" class="w-full bg-blue-950 border border-blue-800 rounded-xl p-3 text-white focus:border-blue-500 outline-none"> </div> </div> <div class="grid grid-cols-2 gap-4"> <div> <label class="text-xs text-blue-300">Ícone</label> <select name="icon" class="w-full bg-blue-950 border border-blue-800 rounded-xl p-3 text-white outline-none"> <option value="🎯">🎯 Alvo</option> <option value="✈️">✈️ Viagem</option> <option value="🚘">🚘 Carro</option> <option value="🏠">🏠 Casa</option> <option value="🛡️">🛡️ Segurança</option> <option value="💍">💍 Casamento</option> </select> </div> <div> <label class="text-xs text-blue-300">Cor</label> <select name="color" class="w-full bg-blue-950 border border-blue-800 rounded-xl p-3 text-white outline-none"> <option value="bg-blue-500">Azul</option> <option value="bg-green-500">Verde</option> <option value="bg-purple-500">Roxo</option> <option value="bg-orange-500">Laranja</option> <option value="bg-pink-500">Rosa</option> </select> </div> </div> <button class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg mt-2">
+Criar Meta
+</button> </form> </div> </main> ` })}`;
+}, "C:/Users/Matheus/or-amento_pessoal_v1/src/pages/metas.astro", void 0);
+
+const $$file = "C:/Users/Matheus/or-amento_pessoal_v1/src/pages/metas.astro";
+const $$url = "/metas";
+
+const _page = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+    __proto__: null,
+    default: $$Metas,
+    file: $$file,
+    prerender,
+    url: $$url
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const page = () => _page;
+
+export { page };

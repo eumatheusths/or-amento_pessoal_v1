@@ -1,0 +1,25 @@
+/* empty css                                     */
+import { e as createComponent, k as renderComponent, r as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_DmKDn6jN.mjs';
+import 'piccolore';
+import { $ as $$Layout } from '../chunks/Layout_eX9uxKGE.mjs';
+export { renderers } from '../renderers.mjs';
+
+const $$Termos = createComponent(($$result, $$props, $$slots) => {
+  return renderTemplate`${renderComponent($$result, "Layout", $$Layout, {}, { "default": ($$result2) => renderTemplate` ${maybeRenderHead()}<div class="p-6 bg-blue-900/20 border-b border-blue-800/30 flex items-center gap-4"> <a href="/dashboard" class="p-2 bg-blue-900 rounded-lg text-blue-400 hover:bg-blue-800 transition-colors"> <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg> </a> <h1 class="text-xl font-bold text-blue-50">Termos de Uso e Privacidade</h1> </div> <main class="max-w-4xl mx-auto px-6 py-8 text-slate-700 dark:text-blue-200 leading-relaxed space-y-6 text-sm md:text-base pb-32"> <section class="bg-white dark:bg-blue-900/20 p-6 rounded-2xl border border-slate-200 dark:border-blue-800/50"> <h2 class="text-lg font-bold text-blue-600 dark:text-white mb-4">1. Introdução</h2> <p>Bem-vindo ao <strong>Finance Storm</strong> ("Plataforma"), desenvolvido e operado por <strong>Storm Mídia</strong> ("Nós"). Ao acessar ou utilizar nossa Plataforma, você concorda em cumprir estes Termos de Uso e nossa Política de Privacidade.</p> </section> <section class="bg-white dark:bg-blue-900/20 p-6 rounded-2xl border border-slate-200 dark:border-blue-800/50"> <h2 class="text-lg font-bold text-blue-600 dark:text-white mb-4">2. Tratamento de Dados (LGPD)</h2> <p class="mb-2">Em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018), informamos que:</p> <ul class="list-disc pl-5 space-y-1 marker:text-blue-500"> <li><strong>Coleta:</strong> Coletamos dados pessoais (Nome, E-mail) e dados financeiros inseridos voluntariamente por você para o funcionamento do sistema.</li> <li><strong>Finalidade:</strong> Os dados são utilizados exclusivamente para fornecer os serviços de gestão financeira, autenticação, recuperação de senha e envio de notificações pertinentes ao uso da plataforma.</li> <li><strong>Segurança:</strong> Adotamos medidas técnicas para proteger seus dados. Suas senhas não são armazenadas em texto simples e utilizamos conexões seguras (HTTPS).</li> <li><strong>Compartilhamento:</strong> A Storm Mídia não vende seus dados. Compartilhamos estritamente o necessário com provedores de infraestrutura (ex: hospedagem, disparo de e-mails) para manter o serviço no ar.</li> </ul> </section> <section class="bg-white dark:bg-blue-900/20 p-6 rounded-2xl border border-slate-200 dark:border-blue-800/50"> <h2 class="text-lg font-bold text-blue-600 dark:text-white mb-4">3. Isenção de Responsabilidade</h2> <p>O Finance Storm é uma ferramenta de organização pessoal. <strong>Não somos consultores financeiros.</strong></p> <p class="mt-2">A Storm Mídia não se responsabiliza por:</p> <ul class="list-disc pl-5 mt-1 space-y-1 marker:text-blue-500"> <li>Decisões de investimento tomadas com base nas informações da plataforma.</li> <li>Imprecisões nos dados de mercado fornecidos por terceiros (APIs de cotação).</li> <li>Perda de dados decorrente de mau uso, compartilhamento de senha ou falhas sistêmicas alheias ao nosso controle.</li> </ul> </section> <section class="bg-white dark:bg-blue-900/20 p-6 rounded-2xl border border-slate-200 dark:border-blue-800/50"> <h2 class="text-lg font-bold text-blue-600 dark:text-white mb-4">4. Deveres do Usuário</h2> <p>Você concorda em:</p> <ul class="list-disc pl-5 mt-1 space-y-1 marker:text-blue-500"> <li>Fornecer informações verdadeiras e atualizadas.</li> <li>Não compartilhar suas credenciais de acesso com terceiros.</li> <li>Não utilizar a plataforma para fins ilícitos ou fraudulentos.</li> </ul> </section> <section class="bg-white dark:bg-blue-900/20 p-6 rounded-2xl border border-slate-200 dark:border-blue-800/50"> <h2 class="text-lg font-bold text-blue-600 dark:text-white mb-4">5. Alterações</h2> <p>A Storm Mídia reserva-se o direito de alterar estes termos a qualquer momento. O uso contínuo da plataforma após as alterações constitui aceitação dos novos termos.</p> </section> <div class="text-center text-xs text-slate-400 dark:text-blue-500 pt-4">
+Última atualização: Novembro de 2025 • Storm Mídia
+</div> </main> ` })}`;
+}, "C:/Users/Matheus/or-amento_pessoal_v1/src/pages/termos.astro", void 0);
+
+const $$file = "C:/Users/Matheus/or-amento_pessoal_v1/src/pages/termos.astro";
+const $$url = "/termos";
+
+const _page = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+    __proto__: null,
+    default: $$Termos,
+    file: $$file,
+    url: $$url
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const page = () => _page;
+
+export { page };

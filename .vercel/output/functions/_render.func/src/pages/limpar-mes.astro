@@ -1,0 +1,19 @@
+---
+export const prerender = false;
+import { deleteMonthTransactions } from '../lib/db';
+
+if (Astro.request.method === 'POST') {
+    const formData = await Astro.request.formData();
+    const userId = Astro.cookies.get('user_session')?.value;
+    const mes = formData.get('mes');
+    const ano = formData.get('ano');
+
+    if (userId && mes && ano) {
+        await deleteMonthTransactions(userId, mes, ano);
+    }
+    
+    return Astro.redirect(`/dashboard?mes=${mes}&ano=${ano}`);
+}
+
+return Astro.redirect('/dashboard');
+---

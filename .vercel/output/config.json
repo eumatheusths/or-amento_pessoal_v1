@@ -1,0 +1,103 @@
+{
+	"version": 3,
+	"routes": [
+		{
+			"handle": "filesystem"
+		},
+		{
+			"src": "^/_astro/(.*)$",
+			"headers": {
+				"cache-control": "public, max-age=31536000, immutable"
+			},
+			"continue": true
+		},
+		{
+			"src": "^/_server-islands/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/_image/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/adicionar/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/aceitar/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/cron/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/cadastro/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/categorias/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/dashboard/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/deletar/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/editar/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/importar/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/importar-ofx/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/investimentos/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/limpar-mes/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/login/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/logout/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/metas/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/pagar/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/recuperar/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/relatorio/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/termos/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/$",
+			"dest": "_render"
+		}
+	]
+}

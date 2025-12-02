@@ -1,0 +1,179 @@
+---
+export const prerender = false;
+import Layout from '../layouts/Layout.astro';
+import { XMLParser } from 'fast-xml-parser';
+
+if (!Astro.cookies.has('user_session')) return Astro.redirect('/login');
+
+let moedas = [];
+let cripto = [];
+let fiis = [];
+let acoes = [];
+let noticias = [];
+let erro = null;
+
+try {
+    // 1. MOEDAS (USD e EUR em Reais - API AwesomeAPI Grátis)
+    const resFiat = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL');
+    const dataFiat = await resFiat.json();
+    moedas = [
+        { symbol: 'Dólar', price: parseFloat(dataFiat.USDBRL.bid), change: parseFloat(dataFiat.USDBRL.pctChange) },
+        { symbol: 'Euro', price: parseFloat(dataFiat.EURBRL.bid), change: parseFloat(dataFiat.EURBRL.pctChange) }
+    ];
+
+    // 2. CRIPTO (CoinGecko)
+    const resCripto = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=brl&include_24hr_change=true');
+    const dataCripto = await resCripto.json();
+    if (dataCripto.bitcoin) {
+        cripto = [
+            { symbol: 'BTC', price: dataCripto.bitcoin.brl, change: dataCripto.bitcoin.brl_24h_change },
+            { symbol: 'ETH', price: dataCripto.ethereum.brl, change: dataCripto.ethereum.brl_24h_change },
+            { symbol: 'SOL', price: dataCripto.solana.brl, change: dataCripto.solana.brl_24h_change }
+        ];
+    }
+
+    // 3. FUNDOS IMOBILIÁRIOS & AÇÕES (Dados Ilustrativos/Mockados)
+    // Nota: APIs de B3 em tempo real são pagas. Coloquei valores fixos para compor o layout.
+    fiis = [
+        { symbol: 'MXRF11', price: 10.45, change: 0.15 },
+        { symbol: 'HGLG11', price: 162.30, change: -0.40 },
+        { symbol: 'KNRI11', price: 159.80, change: 0.22 }
+    ];
+
+    acoes = [
+        { symbol: 'IBOVESPA', price: 128000.50, change: 0.85, isIndex: true }, // Índice
+        { symbol: 'PETR4', price: 38.50, change: 1.20 },
+        { symbol: 'VALE3', price: 68.90, change: -0.50 },
+        { symbol: 'ITUB4', price: 33.20, change: 0.10 }
+    ];
+
+    // 4. NOTÍCIAS (InfoMoney RSS)
+    const resNews = await fetch('https://www.infomoney.com.br/feed/');
+    const xmlText = await resNews.text();
+    const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix : "@_" });
+    const feed = parser.parse(xmlText);
+    
+    // PEGA SÓ AS 3 ÚLTIMAS
+    noticias = feed.rss.channel.item.slice(0, 3).map(item => ({
+        site: 'InfoMoney',
+        title: item.title,
+        text: item.description ? item.description.replace(/<[^>]*>?/gm, '').slice(0, 100) + '...' : '',
+        date: item.pubDate,
+        image: 'https://placehold.co/600x400/1e3a8a/FFF?text=IM', // InfoMoney
+        url: item.link
+    }));
+
+} catch (e) {
+    console.error("Erro:", e);
+    erro = "Erro ao atualizar mercado.";
+}
+
+const formatBRL = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+const getCorVar = (val) => val >= 0 ? 'text-green-400' : 'text-red-400';
+---
+
+<Layout>
+    <div class="p-6 flex items-center gap-4 bg-blue-900/20 border-b border-blue-800/30">
+        <h1 class="text-xl font-bold text-blue-50">Mercado Hoje</h1>
+    </div>
+
+    <main class="max-w-3xl mx-auto px-4 py-6 space-y-8">
+
+        <section>
+            <h3 class="text-blue-300 text-xs uppercase font-bold mb-3 px-1 flex justify-between">
+                <span>Moedas (Câmbio)</span>
+                <span class="text-[10px] text-green-400 animate-pulse">● Ao Vivo</span>
+            </h3>
+            <div class="grid grid-cols-2 gap-3">
+                {moedas.map(item => (
+                    <div class="bg-blue-900/40 border border-blue-800/50 p-4 rounded-2xl">
+                        <div class="flex justify-between mb-1">
+                            <span class="font-bold text-white">{item.symbol}</span>
+                            <span class={`text-xs font-bold ${getCorVar(item.change)}`}>{item.change > 0 ? '+' : ''}{item.change.toFixed(2)}%</span>
+                        </div>
+                        <span class="text-xl font-bold text-blue-50">{formatBRL(item.price)}</span>
+                    </div>
+                ))}
+            </div>
+        </section>
+
+        <section>
+            <h3 class="text-blue-300 text-xs uppercase font-bold mb-3 px-1">Criptomoedas</h3>
+            <div class="flex gap-3 overflow-x-auto pb-2 snap-x scrollbar-hide">
+                {cripto.map(item => (
+                    <div class="min-w-[130px] bg-blue-900/20 border border-blue-800/30 p-3 rounded-2xl snap-start">
+                        <div class="flex justify-between mb-1">
+                            <span class="font-bold text-purple-300 text-sm">{item.symbol}</span>
+                            <span class={`text-[10px] font-bold ${getCorVar(item.change)}`}>{item.change.toFixed(2)}%</span>
+                        </div>
+                        <span class="text-sm font-bold text-white">{formatBRL(item.price)}</span>
+                    </div>
+                ))}
+            </div>
+        </section>
+
+        <section>
+            <h3 class="text-blue-300 text-xs uppercase font-bold mb-3 px-1">Fundos Imobiliários (FIIs)</h3>
+            <div class="flex gap-3 overflow-x-auto pb-2 snap-x scrollbar-hide">
+                {fiis.map(item => (
+                    <div class="min-w-[130px] bg-blue-900/20 border border-blue-800/30 p-3 rounded-2xl snap-start">
+                        <div class="flex justify-between mb-1">
+                            <span class="font-bold text-yellow-300 text-sm">{item.symbol}</span>
+                            <span class={`text-[10px] font-bold ${getCorVar(item.change)}`}>{item.change > 0 ? '+' : ''}{item.change}%</span>
+                        </div>
+                        <span class="text-sm font-bold text-white">{formatBRL(item.price)}</span>
+                    </div>
+                ))}
+            </div>
+        </section>
+
+        <section>
+            <h3 class="text-blue-300 text-xs uppercase font-bold mb-3 px-1">Bolsa Brasileira (B3)</h3>
+            <div class="space-y-3">
+                {acoes.map(item => (
+                    <div class={`p-4 rounded-2xl flex justify-between items-center ${item.isIndex ? 'bg-blue-800/40 border border-blue-500/30' : 'bg-blue-900/20 border border-blue-800/30'}`}>
+                        <div class="flex items-center gap-3">
+                            <div class={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-xs ${item.isIndex ? 'bg-green-600 text-white' : 'bg-blue-950 text-blue-200'}`}>
+                                {item.symbol.substring(0,4)}
+                            </div>
+                            <div>
+                                <p class="font-bold text-white text-sm">{item.symbol}</p>
+                                <p class="text-[10px] text-blue-300">{item.isIndex ? 'Pontos' : 'Ação BR'}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-bold text-white text-sm">{item.isIndex ? item.price.toLocaleString('pt-BR') : formatBRL(item.price)}</p>
+                            <p class={`text-xs font-bold ${getCorVar(item.change)}`}>{item.change > 0 ? '+' : ''}{item.change}%</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </section>
+
+        <section>
+            <h3 class="text-blue-300 text-xs uppercase font-bold mb-3 px-1 flex items-center gap-2">
+                <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                Plantão InfoMoney
+            </h3>
+            <div class="space-y-4">
+                {noticias.map(news => (
+                    <a href={news.url} target="_blank" class="block bg-blue-900/20 border border-blue-800/30 rounded-xl p-4 hover:bg-blue-900/40 transition-colors">
+                        <h2 class="text-white font-bold text-sm mb-1 line-clamp-2">{news.title}</h2>
+                        <p class="text-xs text-blue-300 line-clamp-1">{news.text}</p>
+                        <div class="mt-2 flex items-center gap-2 text-[10px] text-blue-500">
+                            <span class="font-bold text-blue-200">{news.site}</span>
+                            <span>•</span>
+                            <span>Ler completa →</span>
+                        </div>
+                    </a>
+                ))}
+            </div>
+        </section>
+
+    </main>
+</Layout>
+
+<style>
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+</style>

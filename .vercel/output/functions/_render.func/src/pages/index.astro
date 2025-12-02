@@ -1,0 +1,12 @@
+---
+// Essa linha é OBRIGATÓRIA no Astro 5 para funcionar cookies/redirect
+export const prerender = false;
+
+// Verifica se tem cookie
+if (Astro.cookies.has('user_session')) {
+  return Astro.redirect('/dashboard');
+}
+
+// Se não, manda pro login
+return Astro.redirect('/login');
+---
