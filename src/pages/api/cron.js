@@ -1,55 +1,28 @@
-import { getAllUsers } from '../../lib/sheets';
-import { enviarLembreteSemanal } from '../../lib/email';
+export const prerender = false;
+import { supabase } from '../../lib/db'; // Agora usa o banco novo
 
-export async function GET({ request }) {
-    const url = new URL(request.url);
-    const key = url.searchParams.get('key');
+export async function GET() {
+  // Busca contas pendentes que vencem hoje
+  const hoje = new Date().toISOString().split('T')[0];
+  
+  const { data: contas, error } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('type', 'saida')
+    .eq('status', 'pendente')
+    .eq('date', hoje);
 
-    // Segurança simples
-    if (key !== 'segredo_storm_midia') {
-        return new Response(JSON.stringify({ erro: 'Senha incorreta' }), { status: 401 });
-    }
+  if (error) {
+    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+  }
 
-    try {
-        // 1. Busca usuários no banco
-        const usuarios = await getAllUsers();
-        
-        if (!usuarios || usuarios.length === 0) {
-             return new Response(JSON.stringify({ mensagem: 'Nenhum usuário encontrado para enviar.' }), { status: 200 });
-        }
-
-        let enviados = 0;
-        const erros = [];
-
-        // 2. Loop com AWAIT (Crucial para Vercel não matar o processo)
-        for (const user of usuarios) {
-            if (user.email && user.email.includes('@')) {
-                try {
-                    console.log(`Tentando enviar para: ${user.email}`);
-                    const enviou = await enviarLembreteSemanal(user.email, user.name || 'Usuário');
-                    
-                    if (enviou) {
-                        enviados++;
-                    } else {
-                        erros.push(`Falha técnica ao enviar para ${user.email}`);
-                    }
-                } catch (err) {
-                    console.error(`Erro no envio para ${user.email}:`, err);
-                    erros.push(`Erro no envio para ${user.email}: ${err.message}`);
-                }
-            }
-        }
-
-        // 3. Resposta final
-        return new Response(JSON.stringify({ 
-            status: 'Concluído', 
-            enviados: enviados,
-            total_usuarios: usuarios.length,
-            erros: erros
-        }), { status: 200 });
-
-    } catch (error) {
-        console.error("Erro geral no Cron:", error);
-        return new Response(JSON.stringify({ erro: error.message }), { status: 500 });
-    }
+  // Aqui você colocaria a lógica de envio de e-mail se tiver
+  // Por enquanto, apenas retorna quem vence hoje
+  return new Response(JSON.stringify({
+    message: 'Cron executado com sucesso',
+    contasVencendoHoje: contas
+  }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" }
+  });
 }
