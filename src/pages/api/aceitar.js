@@ -1,5 +1,5 @@
 export const prerender = false;
-import { acceptTerms } from '../../lib/sheets';
+import { supabase } from '../../lib/db';
 
 export async function POST({ cookies, redirect }) {
     const userId = cookies.get('user_session')?.value;

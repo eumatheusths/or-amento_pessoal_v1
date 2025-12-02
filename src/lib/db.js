@@ -55,3 +55,23 @@ export async function migrarDados(tabela, dados) {
   const { error } = await supabase.from(tabela).upsert(dados);
   if (error) console.error(`Erro ao migrar ${tabela}:`, error);
 }
+
+// --- CATEGORIAS (Adicione isso no final do arquivo) ---
+
+export async function getCategories(userId) {
+  // Retorna a lista padrão de categorias
+  // (Como não criamos tabela de categorias no SQL, usamos essa lista fixa por enquanto)
+  return [
+    { id: '1', name: 'Salário', type: 'entrada' },
+    { id: '2', name: 'Freelance', type: 'entrada' },
+    { id: '3', name: 'Investimentos', type: 'entrada' },
+    { id: '4', name: 'Alimentação', type: 'saida' },
+    { id: '5', name: 'Transporte', type: 'saida' },
+    { id: '6', name: 'Moradia', type: 'saida' },
+    { id: '7', name: 'Lazer', type: 'saida' },
+    { id: '8', name: 'Educação', type: 'saida' },
+    { id: '9', name: 'Saúde', type: 'saida' },
+    { id: '10', name: 'Contas Fixas', type: 'saida' },
+    { id: '11', name: 'Outros', type: 'saida' }
+  ];
+}

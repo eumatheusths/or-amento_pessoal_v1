@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import Layout from '../layouts/Layout.astro';
-import { getGoals, addGoal, updateGoalBalance, deleteGoal } from '../lib/sheets';
+import { getGoals, addGoal, updateGoalBalance, deleteGoal } from '../lib/db';
 
 if (!Astro.cookies.has('user_session')) return Astro.redirect('/login');
 const userId = Astro.cookies.get('user_session')?.value;

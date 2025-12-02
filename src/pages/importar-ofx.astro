@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import Layout from '../layouts/Layout.astro';
-import { importTransactions } from '../lib/sheets';
+import { importTransactions } from '../lib/db';
 import { parse } from 'node-ofx-parser';
 
 if (!Astro.cookies.has('user_session')) return Astro.redirect('/login');
