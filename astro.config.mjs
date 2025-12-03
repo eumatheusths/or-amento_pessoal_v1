@@ -6,4 +6,5 @@ export default defineConfig({
   output: 'server',
   adapter: vercel(),
   integrations: [tailwind()],
+  // Atualização forçada para Vercel <--- ADICIONE ISSO
 });
